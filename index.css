@@ -1,0 +1,44 @@
+/* Tether — Morandi lotus-pink (藕粉) theme with day/night modes.
+   --tint is an RGB triplet that drives every Tailwind `white` utility (remapped in
+   index.html), so it flips foreground ink between day (warm charcoal) and night
+   (light rice-pink). --rose is the all-time Tether identity accent; --line reuses the
+   portfolio's misty haze blue for dividers so cross-page navigation stays coherent. */
+:root, html[data-theme="day"] {
+  --tint: 71 62 58;      /* 暖炭灰 ink #473E3A(略偏暖棕) */
+  --rose: #c58b83;       /* 豆沙藕粉 accent(更暖) */
+  --rose-soft: #e0c3bd;
+  --line: 184 200 213;   /* 雾霾蓝 divider #B8C8D5 */
+  --bg-base: #f6e9e1;    /* 雾感浅藕粉 page ground(更暖) */
+  --card: #fdf6f0;       /* 暖奶粉卡片 */
+  --muted: 140 126 118;  /* #8C7E76 */
+}
+html[data-theme="night"] {
+  --tint: 242 227 218;   /* 浅暖米粉色 ink #F2E3DA */
+  --rose: #cb9890;       /* 加深低饱和藕粉(更暖) */
+  --rose-soft: #4d3a34;
+  --line: 96 106 116;    /* 夜间雾霾蓝 #606A74 */
+  --bg-base: #271f1a;    /* 暖棕灰柔和深色基底(更暖) */
+  --card: #3a2e28;       /* 暖豆沙粉卡片(暗) */
+  --muted: 186 167 158;  /* #BAA79E */
+}
+
+body {
+  background-color: var(--bg-base);
+  color: rgb(var(--tint));
+  transition: background-color 1s ease, color 1s ease;
+}
+
+/* slow breathing pulse for the closing "breathe with me" moment */
+@keyframes breathe {
+  0%, 100% { transform: scale(0.85); opacity: 0.35; }
+  50% { transform: scale(1.25); opacity: 0.6; }
+}
+.animate-breathe { animation: breathe 8s ease-in-out infinite; }
+
+/* glass panels adapt to the theme ink instead of hard white */
+.glass-panel {
+  background: rgb(var(--tint) / 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgb(var(--tint) / 0.12);
+}

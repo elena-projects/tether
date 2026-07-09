@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="day">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tether · 内在天气</title>
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y6MPKG013G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-Y6MPKG013G');
+    </script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23c2969c'/%3E%3Ccircle cx='67' cy='34' r='11' fill='none' stroke='%23fbeff0' stroke-width='6' opacity='0.92'/%3E%3Ccircle cx='34' cy='67' r='9' fill='%23fbeff0'/%3E%3Cpath d='M34 67 C 34 44 55 34 60 34' fill='none' stroke='%23fbeff0' stroke-width='5' stroke-linecap='round' opacity='0.95'/%3E%3C/svg%3E" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // 藕粉莫兰迪主题：把 white 映射成随日夜翻转的墨色变量（一次覆盖全站白色文字/玻璃面），
+      // 把旧的 teal/emerald/sky/cyan 强调色统一成固定的藕粉音阶（藕粉全时段作 Tether 识别色）。
+      const rose = {50:'#faf3f4',100:'#f1e0e3',200:'#e5cccf',300:'#d5abb2',400:'#c2969c',500:'#b3868d',600:'#9c6f79',700:'#7f5a64',800:'#664853',900:'#4b3640'};
+      // warm taupe grey so cool "slate/gray" text harmonizes with the rose palette
+      const warmGrey = {50:'#f7f3f1',100:'#efe8e4',200:'#e0d5cf',300:'#cbbcb4',400:'#a99b92',500:'#8c7e76',600:'#6f635c',700:'#574d47',800:'#3f3833',900:'#2b2521',950:'#1c1815'};
+      tailwind.config = {
+        theme: { extend: { colors: {
+          white: 'rgb(var(--tint) / <alpha-value>)',
+          teal: rose, emerald: rose, cyan: rose, sky: rose,
+          yellow: rose, amber: rose,           // 火花/智慧点缀也归入藕粉
+          slate: warmGrey, gray: warmGrey,     // 冷灰 → 暖灰
+        } } }
+      };
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+      
+      /* Global Reset for Responsiveness */
+      * {
+        box-sizing: border-box;
+        max-width: 100%;
+      }
+
+      body {
+        font-family: 'Courier Prime', 'Courier New', monospace;
+        background-color: #000000;
+        color: #e2e8f0;
+        overflow-x: hidden; /* Prevent horizontal scroll */
+        transition: background-color 1s ease, color 1s ease;
+      }
+
+      /* Custom scrollbar hide */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* Typewriter cursor animation */
+      .cursor-blink {
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        50% { opacity: 0; }
+      }
+      
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      @keyframes floatUp {
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
+      }
+      .animate-float-up {
+        animation: floatUp 1s ease-out forwards;
+      }
+
+      /* THE FORCE REVEAL CSS */
+      .visible {
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      
+      /* Ensure AI Message Box is hidden by default if not visible class */
+      #ai-message-box {
+        transition: opacity 1s ease-in;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "d3": "https://esm.sh/d3@^7.9.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.569.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js",
+    "firebase/": "https://esm.sh/firebase@^12.9.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
