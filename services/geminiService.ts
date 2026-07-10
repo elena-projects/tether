@@ -1,7 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TetherState, GuardianResult, Language } from "../types";
 
-const apiKey = process.env.API_KEY;
+// In production the bundle carries NO real key — nginx injects it server-side (x-goog-api-key).
+// The placeholder just lets the SDK construct; it's replaced at the proxy. In dev, the real
+// key from .env.local flows through so the vite proxy works.
+const apiKey = process.env.API_KEY || 'proxied';
 
 // Route Gemini through our own origin (a same-origin /v1beta proxy) so moderation
 // works on networks where googleapis.com is blocked (e.g. mainland China).

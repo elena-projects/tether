@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    // SECURITY: never bake the Gemini key into the production bundle — it would be
+    // publicly readable in the browser. In prod the key is injected server-side by
+    // nginx (see nginx.conf / Dockerfile). In local dev we keep it so the vite proxy works.
+    const geminiKey = mode === 'production' ? '' : (env.GEMINI_API_KEY || env.API_KEY || '');
     return {
       server: {
         port: 3000,
@@ -25,8 +29,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.API_KEY),
+        'process.env.API_KEY': JSON.stringify(geminiKey),
+        'process.env.GEMINI_API_KEY': JSON.stringify(geminiKey),
         // Firebase config isn't provisioned in production; define the keys as empty so the
         // production build doesn't reference a bare `process` (which would crash the app).
         // firebase.ts falls back to placeholders and the app runs on its demo/local data.
