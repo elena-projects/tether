@@ -49,7 +49,7 @@ export default function App() {
   // App State
   const [state, setState] = useState<TetherState>(INITIAL_STATE);
   const [role, setRole] = useState<TetherRole>(TetherRole.WITNESS);
-  const [language, setLanguage] = useState<Language>('zh');
+  const [language, setLanguage] = useState<Language>(() => (typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('zh')) ? 'zh' : 'en');
   const [bgColor, setBgColor] = useState<string>('rgb(0,0,0)');
 
   // --- Day / Night theme (6:00–19:00 day, else night; manual toggle locks the choice) ---

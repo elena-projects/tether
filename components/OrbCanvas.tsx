@@ -57,16 +57,22 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
         .style("opacity", 0);
     }
 
-    // Animation Loop
-    const animate = () => {
+    // Animation Loop — throttled to ~30fps. The orb tears down and rebuilds the whole SVG
+    // (with a glow filter) on each draw, which is expensive on phones. Time advances by real
+    // elapsed seconds (dt) so breathing speed is identical regardless of frame rate.
+    let lastDraw = 0;
+    const animate = (time: number) => {
+      requestRef.current = requestAnimationFrame(animate);
+      if (time - lastDraw < 33) return;                 // cap the expensive redraw at ~30fps
+      const dt = lastDraw ? Math.min((time - lastDraw) / 1000, 0.1) : 1 / 30;
+      lastDraw = time;
+
       // 1. Time Management
-      // If Healing: 8 second cycle (4s in, 4s out) -> 0.125 cycles per second
-      // Standard: variable based on arousal
       let breathCycle = 0;
       let breathScale = 1;
-      
+
       if (isHealing) {
-        timeRef.current += 1/60; // Approximate seconds
+        timeRef.current += dt; // real seconds
         // Cycle is 0 to 1 over 8 seconds
         const cycleProgress = (timeRef.current % 8) / 8;
         // Sine wave for breathing (starts at 0, goes to 1, back to 0)
@@ -74,14 +80,14 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
         
         // Healing Progress (Visual repair of cracks)
         // Increases slowly as long as isHealing is true
-        healingProgressRef.current = Math.min(healingProgressRef.current + 0.002, 1);
+        healingProgressRef.current = Math.min(healingProgressRef.current + dt * 0.12, 1);
       } else {
-        timeRef.current += 0.01;
-        const breathSpeed = 1 + (state.arousal / 50); 
+        timeRef.current += dt * 0.6;
+        const breathSpeed = 1 + (state.arousal / 50);
         breathCycle = Math.sin(timeRef.current * breathSpeed) * 0.5 + 0.5; // Normalized 0-1
         
         // Reset healing progress if not healing
-        healingProgressRef.current = Math.max(healingProgressRef.current - 0.05, 0);
+        healingProgressRef.current = Math.max(healingProgressRef.current - dt * 3, 0);
       }
 
       // Map breath cycle to radius scale (1.0 to 1.15)
@@ -201,7 +207,6 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
            .style("opacity", 0);
       }
 
-      requestRef.current = requestAnimationFrame(animate);
     };
 
     requestRef.current = requestAnimationFrame(animate);
