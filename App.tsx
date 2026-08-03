@@ -94,6 +94,8 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendWarning, setSendWarning] = useState("");     // Guardian blocked the message
   const [wallMessages, setWallMessages] = useState<Message[]>([]); // real "kind words" wall
+  const wallRef = useRef<Message[]>([]);
+  useEffect(() => { wallRef.current = wallMessages; }, [wallMessages]); // latest wall, readable inside the drift timer
   const [feedback, setFeedback] = useState<{type: 'success' | 'error' | null, msg: string}>({ type: null, msg: '' });
   
   // Data Flow
@@ -283,21 +285,31 @@ export default function App() {
       
       driftTimerRef.current = setTimeout(async () => {
         const uid = currentUser.uid;
-        // 1. Personalised comfort that reads their exact state (Gemini). Falls back to a
-        //    warm static line if the AI can't be reached. Kept local (not written to the
-        //    shared wall) since it's meant just for this person.
         let text: string;
-        try {
-          text = (await generateFallbackMessage(stateRef.current, language) || '').trim();
-          if (!text) throw new Error('empty');
-        } catch {
-          const messages = aiFallbackMessages[language] || aiFallbackMessages['en'];
-          text = messages[Math.floor(Math.random() * messages.length)];
+        let senderName = 'AI Companion';
+        let msgType: 'human' | 'ai' = 'ai';
+
+        // Prefer a REAL kind note someone already wrote to the wall — a human voice comforts
+        // more than a generated one. Fall back to personalised AI comfort if the wall is empty.
+        const pool = (wallRef.current || []).filter(m => m.text && m.type === 'human' && m.senderId !== uid);
+        if (pool.length > 0 && Math.random() < 0.6) {
+          const picked = pool[Math.floor(Math.random() * pool.length)];
+          text = picked.text;
+          senderName = picked.senderName || (language === 'zh' ? '一位朋友' : 'a friend');
+          msgType = 'human';
+        } else {
+          try {
+            text = (await generateFallbackMessage(stateRef.current, language) || '').trim();
+            if (!text) throw new Error('empty');
+          } catch {
+            const messages = aiFallbackMessages[language] || aiFallbackMessages['en'];
+            text = messages[Math.floor(Math.random() * messages.length)];
+          }
         }
 
         const fallbackMsg: Message = {
-          id: 'ai_fallback_' + Date.now(), text, senderName: 'AI Companion', senderId: '0',
-          targetId: uid, timestamp: Date.now(), voteCount: 0, type: 'ai',
+          id: 'comfort_' + Date.now(), text, senderName, senderId: msgType === 'human' ? 'wall' : '0',
+          targetId: uid, timestamp: Date.now(), voteCount: 0, type: msgType,
         };
         setLocalAiMessage(fallbackMsg);
 
