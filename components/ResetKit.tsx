@@ -3,7 +3,7 @@ import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2 } from 'lu
 import { readOwnJournal } from '../services/journal';
 import { readOwnSent, SentMessage } from '../services/sent';
 import { readOwnWorries, appendWorry, updateWorry, Worry, WorryOutcome } from '../services/worries';
-import { reflectReply } from '../services/geminiService';
+import { groundingReply } from '../services/geminiService';
 
 // A small "in-the-moment reset" toolkit + your emotion journal, in one place: evidence-based
 // micro-tools for when things feel like too much (paced breathing, 5-4-3-2-1 grounding, a
@@ -135,10 +135,7 @@ const Ground: React.FC<{ zh: boolean; language: string }> = ({ zh, language }) =
   const finish = async () => {
     setLoading(true);
     const noticed = notes.map((n, k) => (n.trim() ? `${zh ? steps[k].s : steps[k].s.replace('can ', '')}: ${n.trim()}` : '')).filter(Boolean).join('; ');
-    const framed = zh
-      ? `（我在做 5-4-3-2-1 着陆练习，把注意力一点点带回身边。）我此刻注意到：${noticed || '我慢慢看了看四周。'}`
-      : `(I'm doing a 5-4-3-2-1 grounding exercise, bringing my attention gently back to here.) Right now I notice — ${noticed || 'I looked slowly around me.'}`;
-    try { setReply(await reflectReply(framed, language as any)); }
+    try { setReply(await groundingReply(noticed, language as any)); }
     finally { setLoading(false); setI(steps.length); }
   };
 

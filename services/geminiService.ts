@@ -159,3 +159,43 @@ export const reflectReply = async (text: string, language: Language): Promise<st
     return fallback;
   }
 };
+
+/**
+ * GROUNDING reply — after a 5-4-3-2-1 exercise where the user wrote down what they noticed
+ * around them. Warm, plain, like a friend beside them; lightly echoes what they noticed so it
+ * feels personal. Deliberately does NOT narrate the user ("you are focusing on…").
+ */
+export const groundingReply = async (noticed: string, language: Language): Promise<string> => {
+  const fallback = language === 'zh'
+    ? '你把身边一样样看清楚了。此刻，你就在这里。'
+    : "You noticed each thing around you, one by one. Right now, you're here.";
+  if (!apiKey) return fallback;
+
+  const prompt = `
+    A teenager just did a 5-4-3-2-1 grounding exercise in a mental-health app and wrote down, in
+    their own words, what they noticed around them (things they can see / hear / touch / smell /
+    taste). Only they will read your reply.
+
+    Reply in ${language}, in 1–2 short, warm, natural sentences — like a gentle friend sitting
+    right next to them.
+    - Lightly echo ONE (at most two) of the specific things they noticed, so it feels personal.
+    - Gently affirm they've brought themselves back to this moment.
+    - Talk WITH them, not about them. NEVER narrate or describe them ("you are focusing on…",
+      "you are feeling…"). No lecturing, no advice, no clichés, no therapy-brochure language.
+    - Sound like a real person — plain and warm.
+
+    What they noticed: ${noticed || '(they looked slowly around them)'}
+
+    Return ONLY the reply, in ${language}.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    return response.text?.trim() || fallback;
+  } catch (error) {
+    return fallback;
+  }
+};
