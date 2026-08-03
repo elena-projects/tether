@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, PenLine, History, Loader2 } from 'lucide-react';
+import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2 } from 'lucide-react';
 import { readOwnJournal } from '../services/journal';
 import { readOwnSent, SentMessage } from '../services/sent';
 import { readOwnWorries, appendWorry, updateWorry, Worry, WorryOutcome } from '../services/worries';
@@ -13,7 +13,7 @@ import { reflectReply } from '../services/geminiService';
 interface LogEntry { id: number; timestamp: number; valence: number; arousal: number; message: string; }
 
 type Props = { language: 'en' | 'zh' | string; onClose: () => void; onUsed?: (tool: string) => void; version?: number };
-type Tool = 'menu' | 'breathe' | 'ground' | 'reflect' | 'kind' | 'worry' | 'worries';
+type Tool = 'menu' | 'breathe' | 'ground' | 'kind' | 'worry' | 'worries';
 
 const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) => {
   const zh = language === 'zh';
@@ -34,7 +34,6 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
   const items: { key: Tool; icon: React.ReactNode; title: string; sub: string }[] = [
     { key: 'breathe', icon: <Wind size={20} />, title: zh ? '跟着呼吸' : 'Breathe', sub: zh ? '慢下来，几口气就好' : 'Slow down in a few breaths' },
     { key: 'ground', icon: <Anchor size={20} />, title: zh ? '回到当下' : 'Ground', sub: zh ? '5-4-3-2-1，把自己拉回来' : '5-4-3-2-1, come back to now' },
-    { key: 'reflect', icon: <PenLine size={20} />, title: zh ? '写下此刻' : 'Say what’s here', sub: zh ? '说说你看到、感觉到什么' : 'Notice what you see and feel' },
     { key: 'kind', icon: <Heart size={20} />, title: zh ? '善待自己' : 'Be kind' , sub: zh ? '像对朋友一样对自己' : 'Speak to yourself like a friend' },
     { key: 'worry', icon: <Inbox size={20} />, title: zh ? '放下担忧' : 'Set it aside', sub: zh ? '写下、收起来，之后再回看' : 'Set it down, look back later' },
   ];
@@ -52,7 +51,7 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
           )}
           <div>
             <h2 className="font-bold">{zh ? '先稳一稳' : 'Steady yourself'}</h2>
-            <p className="text-[11px] opacity-50">{zh ? '难受的时候，挑一个陪你几分钟' : 'Pick one to sit with you for a moment'}</p>
+            <p className="text-[11px] opacity-50">{zh ? '说说此刻，或挑一个陪你几分钟' : 'Say what’s here, or pick something to sit with you'}</p>
           </div>
           <button onClick={onClose} className="ml-auto p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"><X size={18} /></button>
         </div>
@@ -60,8 +59,12 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
         <div className="p-5">
           {tool === 'menu' && (
             <div className="space-y-3">
+              {/* Say what's here — integrated right into the panel, with a warm AI reply */}
+              <div className="rounded-2xl px-4 pb-2" style={{ background: 'rgb(var(--tint) / 0.05)', border: '1px solid rgb(var(--tint) / 0.1)' }}>
+                <Reflect zh={zh} language={language} />
+              </div>
               <MoodTrend zh={zh} logs={logs} />
-              <p className="text-[11px] tracking-widest uppercase font-bold opacity-40 pt-1 px-1">{zh ? '现在，做点什么' : 'Right now, try one'}</p>
+              <p className="text-[11px] tracking-widest uppercase font-bold opacity-40 pt-1 px-1">{zh ? '或者，做点什么' : 'Or, try one of these'}</p>
               {items.map((it) => (
                 <button key={it.key} onClick={() => enter(it.key)}
                         className="w-full flex items-center gap-4 p-4 rounded-2xl glass-panel text-left hover:brightness-125 transition-all">
@@ -77,7 +80,6 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
           )}
           {tool === 'breathe' && <Breathe zh={zh} />}
           {tool === 'ground' && <Ground zh={zh} />}
-          {tool === 'reflect' && <Reflect zh={zh} language={language} />}
           {tool === 'kind' && <Kind zh={zh} />}
           {tool === 'worry' && <WorryTool zh={zh} onDone={() => setTool('menu')} onReview={() => setTool('worries')} />}
           {tool === 'worries' && <Worries zh={zh} />}
