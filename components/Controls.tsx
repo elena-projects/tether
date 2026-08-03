@@ -58,8 +58,8 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
     <div className="w-full max-w-md mx-auto space-y-3 select-none touch-none">
       
       {/* 2D Emotion Pad */}
-      <div className="space-y-1">
-        
+      <div className="space-y-2">
+
         {/* Y Axis: Top Label */}
         <div className="flex justify-center items-end text-[0.625rem] tracking-widest font-bold opacity-60 h-4">
              <span>{labels.highEnergy}</span>
@@ -112,7 +112,7 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
         </div>
 
         {/* X Axis Labels */}
-        <div className="flex justify-between items-center text-[0.625rem] tracking-widest opacity-60 px-0 pt-2">
+        <div className="flex justify-between items-center text-[0.625rem] tracking-widest opacity-60 px-0 pt-3">
             <span className="w-1/3 text-left">{labels.unpleasant}</span>
             <span className="w-1/3 text-center font-bold opacity-80">{labels.valence}</span>
             <span className="w-1/3 text-right">{labels.pleasant}</span>

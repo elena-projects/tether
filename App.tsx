@@ -645,12 +645,12 @@ export default function App() {
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-7 animate-in fade-in duration-700">
             <p className="text-center text-lg md:text-xl font-serif italic opacity-90 max-w-sm leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="relative flex justify-center w-52 md:w-56 -my-3">
+            <div className="relative flex justify-center w-48 md:w-52 -my-2">
                <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
                {isHealing && soundOn && (
                  <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
@@ -660,7 +660,7 @@ export default function App() {
                )}
             </div>
 
-            <div className="relative w-full max-w-[320px]">
+            <div className="w-full max-w-[300px]">
               <Controls
                 state={state}
                 onChange={setState}
@@ -671,16 +671,13 @@ export default function App() {
                   lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
                 }}
               />
-              {!hasInteracted && (
-                <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center z-10 animate-in fade-in duration-1000">
-                   <div className="text-[11px] tracking-widest uppercase py-1.5 px-4 rounded-full shadow-lg animate-bounce text-center max-w-[85%]" style={{ background: 'var(--rose)', color: '#2b2420' }}>
-                     {zh ? '滑动这里，同步你的内在' : 'Drag here to tune in'}
-                   </div>
-                </div>
-              )}
             </div>
 
-            <button onClick={() => setStep('reflect')} className="group mt-2 flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
+            <p className={`text-[11px] tracking-widest uppercase text-center transition-opacity duration-700 ${hasInteracted ? 'opacity-0' : 'opacity-70 animate-pulse'}`} style={{ color: 'var(--rose)' }}>
+              {zh ? '拖动圆点，同步你的内在' : 'Drag the dot to tune in'}
+            </p>
+
+            <button onClick={() => setStep('reflect')} className="group flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
               <span className="font-bold">{zh ? '就先这样，继续' : 'Continue'}</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
