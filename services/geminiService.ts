@@ -49,7 +49,7 @@ export const moderateContent = async (text: string, language: Language): Promise
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -109,7 +109,7 @@ export const generateFallbackMessage = async (state: TetherState, language: Lang
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
