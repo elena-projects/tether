@@ -20,7 +20,6 @@ import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, 
 const INITIAL_STATE: TetherState = {
   valence: 50,
   arousal: 50,
-  body: 50,
 };
 
 const TARGET_DESCRIPTORS = ["HEAVY", "COLD", "BRITTLE", "HOLLOW", "SILENT", "LOST", "FADING", "SHATTERED", "DARK"];
@@ -29,9 +28,11 @@ const TARGET_DESCRIPTORS = ["HEAVY", "COLD", "BRITTLE", "HOLLOW", "SILENT", "LOS
 // range per theme (light lotus pastels by day, deep warm tones by night) so it never
 // clashes with the calm palette. Corners map to the valence×arousal quadrants.
 const MOOD_CORNERS = {
-  // Day corners softened a touch (less bright/glary) while staying warm & light.
-  day:   { tl: [190, 170, 173], tr: [216, 196, 180], bl: [186, 184, 190], br: [210, 190, 186] },
-  night: { tl: [78, 53, 54],    tr: [98, 69, 54],    bl: [60, 56, 60],    br: [78, 56, 55] },
+  // Warm-neutral corners that sit gently around each theme's base so the "weather" tints
+  // the room without ever clashing with the calm ground. Quadrants: tl storm, tr sun,
+  // bl rain, br clear.
+  day:   { tl: [206, 190, 182], tr: [222, 206, 186], bl: [198, 192, 184], br: [220, 206, 190] },
+  night: { tl: [76, 62, 54],    tr: [92, 74, 56],    bl: [64, 60, 56],    br: [96, 82, 62] },
 };
 
 export default function App() {
@@ -54,12 +55,11 @@ export default function App() {
   const [language, setLanguage] = useState<Language>(() => (typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('zh')) ? 'zh' : 'en');
   const [bgColor, setBgColor] = useState<string>('rgb(0,0,0)');
 
-  // --- Day / Night theme (6:00–19:00 day, else night; manual toggle locks the choice) ---
+  // --- Day / Night theme (defaults to the calm warm-dark "night"; manual toggle locks it) ---
   const getInitialMode = (): 'day' | 'night' => {
     const locked = localStorage.getItem('tether_theme');
     if (locked === 'day' || locked === 'night') return locked;
-    const h = new Date().getHours();
-    return h >= 6 && h < 19 ? 'day' : 'night';
+    return 'night';
   };
   const [mode, setMode] = useState<'day' | 'night'>(getInitialMode);
   useEffect(() => { document.documentElement.dataset.theme = mode; }, [mode]);
@@ -68,8 +68,9 @@ export default function App() {
     setMode(m);
     localStorage.setItem('tether_theme', m);
   };
-  // Sound on/off for the healing drone (persisted). Default on.
-  const [soundOn, setSoundOn] = useState<boolean>(() => localStorage.getItem('tether_sound') !== 'off');
+  // Sound on/off for the healing drone (persisted). Default OFF — many users open this in
+  // class or in public, where a surprise drone is jarring; they can turn it on deliberately.
+  const [soundOn, setSoundOn] = useState<boolean>(() => localStorage.getItem('tether_sound') === 'on');
   const toggleSound = () => {
     setSoundOn(prev => {
       const next = !prev;
@@ -178,7 +179,8 @@ export default function App() {
   // --- HEALING MODE LOGIC ---
   const wasHealingRef = useRef(false);
   useEffect(() => {
-    const healing = !showLanding && state.body < 50;
+    // Feeling low (low valence) gently drops the space into a soothing "healing" state.
+    const healing = !showLanding && state.valence < 35;
     setIsHealing(healing);
     if (healing && soundOn) {
        startHealingDrone();
@@ -186,9 +188,9 @@ export default function App() {
        stopHealingDrone();
     }
     // A soft, calming pulse the moment you drop into healing (Android only — iOS has no web vibration).
-    if (healing && !wasHealingRef.current) vibrate([0, 40, 130, 40]);
+    if (healing && soundOn && !wasHealingRef.current) vibrate([0, 40, 130, 40]);
     wasHealingRef.current = healing;
-  }, [state.body, showLanding, soundOn]);
+  }, [state.valence, showLanding, soundOn]);
 
   // Breathing haptic on the closing "breathe with me" step: one soft pulse at the
   // start of each 8s breath cycle (matches the .animate-breathe animation). Android only.
@@ -211,7 +213,7 @@ export default function App() {
 
   // --- TRACK INTERACTION FOR NUDGE ---
   useEffect(() => {
-    if (!hasInteracted && (state.valence !== 50 || state.arousal !== 50 || state.body !== 50)) {
+    if (!hasInteracted && (state.valence !== 50 || state.arousal !== 50)) {
        setHasInteracted(true);
     }
   }, [state, hasInteracted]);
@@ -526,8 +528,7 @@ export default function App() {
 
   // A gentle "I see you" reflection — affect labeling / validation of the current state.
   const reflection = (() => {
-    const { valence: v, arousal: a, body: b } = state;
-    if (b < 30) return zh ? '身体好像很不舒服。先轻轻地，陪着它就好，不用做什么。' : "Your body seems to be hurting. Just stay gently with it — nothing to fix.";
+    const { valence: v, arousal: a } = state;
     if (v < 40 && a > 55) return zh ? '此刻你心里有点乱、有点撑着。能感觉到你在硬扛——我看见了。' : "It feels tight and restless in there. I can tell you're holding a lot — I see it.";
     if (v < 40) return zh ? '此刻你有点沉、有点累。被这样看见，也没关系，慢慢来。' : "It feels heavy and tired right now. It's okay to be seen like this. Take your time.";
     if (v > 60) return zh ? '此刻你心里有一点光。真好——让自己好好感受一下。' : "There's a little light in you right now. That's lovely — let yourself feel it.";
@@ -651,7 +652,7 @@ export default function App() {
 
             <div className="relative filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)] flex justify-center">
                <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
-               {isHealing && (
+               {isHealing && soundOn && (
                  <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
                     <Volume2 size={12} />
                     <span className="text-[9px] tracking-widest uppercase">{zh ? '双耳疗愈音已开启' : 'Binaural Drone Active'}</span>
@@ -665,10 +666,9 @@ export default function App() {
                 onChange={setState}
                 textColor={theme.text}
                 labels={{
-                  valence: t.valence, arousal: t.arousal, body: t.body,
+                  valence: t.valence, arousal: t.arousal,
                   unpleasant: t.unpleasant, pleasant: t.pleasant,
                   lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
-                  shattered: t.shattered, whole: t.whole,
                 }}
               />
               {!hasInteracted && (

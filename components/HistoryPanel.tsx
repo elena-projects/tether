@@ -33,7 +33,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
         const formattedLocal = localSent.map((msg: any) => ({
             id: msg.id,
             timestamp: msg.timestamp,
-            state: { valence: 70, arousal: 50, body: 50 }, // Mock anchored state
+            state: { valence: 70, arousal: 50 }, // Mock anchored state
             note: `Sent to ${msg.target}: "${msg.text}"`,
             isSent: true // Custom flag for UI
         }));
@@ -126,7 +126,6 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
                         <div className="flex gap-2 mt-1 opacity-60 text-[10px] uppercase">
                             <span className="bg-white/5 px-1 rounded">V: {entry.state.valence}</span>
                             <span className="bg-white/5 px-1 rounded">A: {entry.state.arousal}</span>
-                            <span className="bg-white/5 px-1 rounded">B: {entry.state.body}</span>
                         </div>
                       </>
                   )}

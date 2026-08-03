@@ -2,7 +2,6 @@
 export interface TetherState {
   valence: number; // 0 (Unpleasant) to 100 (Pleasant) - X Axis
   arousal: number; // 0 (Low Energy) to 100 (High Energy) - Y Axis
-  body: number; // 0 (Shattered) to 100 (Whole)
 }
 
 // The user's role based on their Valence state

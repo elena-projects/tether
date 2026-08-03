@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Fingerprint, CheckSquare, Square, ArrowRight, Sliders, Activity, Users, Globe } from 'lucide-react';
+import { Fingerprint, CheckSquare, Square, ArrowRight, Sliders, LifeBuoy, Users, Globe } from 'lucide-react';
 import { Language } from '../types';
 import { getTranslation } from '../translations';
 
@@ -40,7 +40,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
   };
 
   return (
-    <div style={{ ['--tint' as any]: '242 227 218' }} className={`fixed inset-0 z-50 bg-[#2b2420] flex flex-col items-center justify-start pt-[15vh] pb-12 transition-all duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div style={{ ['--tint' as any]: '237 228 218' }} className={`fixed inset-0 z-50 bg-[#3a322c] flex flex-col items-center justify-start pt-[15vh] pb-12 transition-all duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
        <style>
          {`
            @keyframes floatGentle {
@@ -66,7 +66,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
 
        {/* Ambient Background Radial Gradient */}
        <div className="absolute inset-0 transition-opacity duration-1000" style={{
-          background: `radial-gradient(circle at 50% 40%, #3a332d 0%, #2c2521 55%, #241d19 100%)`
+          background: `radial-gradient(circle at 50% 40%, #4b4137 0%, #3c332c 55%, #322a24 100%)`
        }}></div>
 
        {/* Film Grain Overlay */}
@@ -74,9 +74,9 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
        }}></div>
 
-       {/* Ambient Aura — soft pink wash behind the title */}
-       <div className="absolute top-[34%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[680px] bg-[#e0a6b0] opacity-[0.30] rounded-full blur-[160px] pointer-events-none"></div>
-       <div className="absolute top-[64%] left-[36%] -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-[#d9959f] opacity-[0.16] rounded-full blur-[150px] pointer-events-none"></div>
+       {/* Ambient Aura — soft terracotta "warm light" wash behind the title */}
+       <div className="absolute top-[34%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[680px] bg-[#d4967a] opacity-[0.28] rounded-full blur-[160px] pointer-events-none"></div>
+       <div className="absolute top-[64%] left-[36%] -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-[#c97f5e] opacity-[0.15] rounded-full blur-[150px] pointer-events-none"></div>
 
        <div className="relative z-10 w-full max-w-6xl px-6 md:px-12 flex flex-col items-center">
          
@@ -95,17 +95,17 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                    <Sliders size={20} className="opacity-90" />
                </div>
-               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '调频' : 'Tune In'}</h3>
-               <p className="text-slate-500 font-sans leading-relaxed">{zh ? '用滑块描绘你此刻的情绪与能量。' : 'Use the sliders to define your current mood and energy.'}</p>
+               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '看见此刻' : 'See where you are'}</h3>
+               <p className="text-slate-500 font-sans leading-relaxed">{zh ? '画出此刻的情绪与能量，给说不清的感受一个形状。' : 'Map your mood and energy right now — give the feeling a shape.'}</p>
             </div>
-            
+
             {/* Step 2 */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-5 group transition-all duration-500 hover:-translate-y-2 delay-75">
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                   <Activity size={20} className="opacity-90" />
+                   <LifeBuoy size={20} className="opacity-90" />
                </div>
-               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '沉浸' : 'Immerse'}</h3>
-               <p className="text-slate-500 font-sans leading-relaxed">{zh ? '感受色彩与声音随你的频率流动。' : 'Experience how the colors and sounds shift to match your frequency.'}</p>
+               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '稳住自己' : 'Steady yourself'}</h3>
+               <p className="text-slate-500 font-sans leading-relaxed">{zh ? '难受时用几个小工具缓一缓，慢慢也能看到自己情绪的走向。' : 'Reach for small tools when it’s a lot — and watch how your mood trends over time.'}</p>
             </div>
 
             {/* Step 3 */}
@@ -113,7 +113,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                    <Users size={20} className="opacity-90" />
                </div>
-               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '连接' : 'Connect'}</h3>
+               <h3 className="text-white font-sans font-medium tracking-widest text-sm uppercase">{zh ? '被看见' : 'Be seen'}</h3>
                <p className="text-slate-500 font-sans leading-relaxed">{zh ? '低落时收到陌生人的牵系，充盈时为他人点一盏光。' : "Receive a tether from a stranger when you're low, or send a light when you're full."}</p>
             </div>
          </div>
@@ -148,7 +148,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
                 <button 
                   type="submit"
                   disabled={!username.trim()}
-                  className="group flex justify-center items-center gap-4 px-12 py-4 bg-transparent border border-white/20 hover:bg-[#d5abb2] hover:text-[#2b2521] hover:border-transparent transition-all duration-500 rounded-full text-xs md:text-sm font-sans tracking-[0.2em] uppercase disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-white disabled:cursor-not-allowed text-white shadow-none hover:shadow-[0_0_30px_rgba(194,150,156,0.35)]"
+                  className="group flex justify-center items-center gap-4 px-12 py-4 bg-transparent border border-white/20 hover:bg-[#cd7a56] hover:text-[#2b2521] hover:border-transparent transition-all duration-500 rounded-full text-xs md:text-sm font-sans tracking-[0.2em] uppercase disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-white disabled:cursor-not-allowed text-white shadow-none hover:shadow-[0_0_30px_rgba(205,122,86,0.35)]"
                 >
                   <span className="font-semibold">{t.enter}</span>
                   <ArrowRight size={16} className="opacity-80 group-hover:translate-x-1 transition-transform duration-500" />

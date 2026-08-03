@@ -105,30 +105,30 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
       const baseRadius = size / 3;
       const radius = baseRadius * breathScale;
 
-      // --- Color Logic (Morandi lotus-pink: low saturation, warm rose/mauve band) ---
-      let saturation = 24 + (state.valence * 0.14); // muted 24–38%
-      let lightness = 62 + (state.valence * 0.12);  // soft 62–74%
+      // --- Color Logic (warm terracotta/clay: a soft "warm light" band) ---
+      let saturation = 32 + (state.valence * 0.14); // muted 32–46%
+      let lightness = 58 + (state.valence * 0.12);  // soft 58–70%
       let hue = 0;
 
       if (isPulsing) {
-        hue = 345; // soft rose
-        saturation = 34;
-        lightness = 76;
+        hue = 20; // warm terracotta glow
+        saturation = 46;
+        lightness = 70;
       } else if (isHealing) {
-        // breathe around a calming soft rose during healing
-        hue = 345 + (Math.sin(timeRef.current) * 8);
-        saturation = 30;
+        // breathe around a calming warm clay during healing
+        hue = 22 + (Math.sin(timeRef.current) * 6);
+        saturation = 40;
       } else if (state.arousal > 50) {
-         hue = 22 - (state.valence * 0.08); // energetic → warm peach-rose
+         hue = 28 - (state.valence * 0.06); // energetic → warm terracotta
       } else {
-         hue = 340 + (state.valence * 0.1); // calm → warm rose
+         hue = 18 + (state.valence * 0.08); // calm → soft clay
       }
       const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 
-      // --- Body/Crack Logic with Healing ---
-      // effectiveBody is the visual state. It improves with healingProgressRef, 
-      // even if the actual state.body is low.
-      const visualBodyState = Math.min(100, state.body + (healingProgressRef.current * 50));
+      // --- Wholeness/Crack Logic with Healing ---
+      // Feeling low (low valence) fractures the orb; it visually mends as healingProgressRef
+      // rises during a soothing breath, even before the underlying mood changes.
+      const visualBodyState = Math.min(100, state.valence + (healingProgressRef.current * 50));
       
       const segmentCount = visualBodyState > 95 ? 1 : Math.max(2, Math.floor(60 - (visualBodyState / 2))); 
       const gapSize = visualBodyState > 95 ? 0 : (100 - visualBodyState) * 0.005; 

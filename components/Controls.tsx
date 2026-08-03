@@ -8,23 +8,16 @@ interface ControlsProps {
   labels: {
     valence: string;
     arousal: string;
-    body: string;
     unpleasant: string;
     pleasant: string;
     lowEnergy: string;
     highEnergy: string;
-    shattered: string;
-    whole: string;
   }
 }
 
 const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels }) => {
   const padRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  const handleBodyChange = (value: number) => {
-    onChange({ ...state, body: value });
-  };
 
   const updatePad = (clientX: number, clientY: number) => {
     if (!padRef.current) return;
@@ -123,31 +116,6 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
             <span className="w-1/3 text-left">{labels.unpleasant}</span>
             <span className="w-1/3 text-center font-bold opacity-80">{labels.valence}</span>
             <span className="w-1/3 text-right">{labels.pleasant}</span>
-        </div>
-      </div>
-
-      {/* Body Slider */}
-      <div className="space-y-4 pt-2">
-        <div className="flex justify-between items-end px-1">
-            <label className={`text-sm tracking-widest font-bold ${textColor}`}>{labels.body}</label>
-             <div className="flex gap-2 items-center">
-                <span className={`text-lg font-bold ${textColor}`}>{state.body}%</span>
-                <span className={`text-xs ${textColor} opacity-60`}>
-                    {state.body < 30 ? labels.shattered : state.body > 70 ? labels.whole : ""}
-                </span>
-            </div>
-        </div>
-        <div className="flex items-center gap-3 w-full px-1">
-            <span className={`text-[10px] ${textColor} opacity-50 whitespace-nowrap`}>0%</span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={state.body}
-              onChange={(e) => handleBodyChange(parseInt(e.target.value))}
-              className="flex-1 w-full h-2 bg-white/20 rounded-full appearance-none cursor-pointer accent-white hover:accent-gray-300 focus:outline-none touch-manipulation"
-            />
-            <span className={`text-[10px] ${textColor} opacity-50 whitespace-nowrap`}>100%</span>
         </div>
       </div>
 
