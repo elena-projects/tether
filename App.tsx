@@ -323,8 +323,9 @@ export default function App() {
         };
         setLocalAiMessage(fallbackMsg);
 
-        // record to the local journey log (feeds the emotion trajectory / weekly recap)
-        appendJournal({ id: Date.now(), timestamp: Date.now(), valence: stateRef.current.valence, arousal: stateRef.current.arousal, message: text });
+        // NOTE: comfort messages are the app (or another person) speaking TO you, not your
+        // own words — so they are deliberately NOT written to your journal / "what you told
+        // yourself". Your journal holds only your own check-ins.
         setJourneyVersion(v => v + 1);
       }, 15000); // Strict 15 Seconds
     }
