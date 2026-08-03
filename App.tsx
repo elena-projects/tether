@@ -10,11 +10,12 @@ import Controls from './components/Controls';
 import LandingOverlay from './components/LandingOverlay';
 import HistoryPanel from './components/HistoryPanel';
 import { JourneyLog } from './components/JourneyLog';
+import ResetKit from './components/ResetKit';
 import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
-import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut } from 'lucide-react';
+import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
   valence: 50,
@@ -39,6 +40,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [showSafety, setShowSafety] = useState(false);   // crisis-support screen
+  const [showKit, setShowKit] = useState(false);         // reset kit + emotion journal
   const [showWall, setShowWall] = useState(false);       // always-on "kind words" wall
   // Post-login flow: 'welcome' (a calm "remember you" screen) → 'main' (the dashboard).
   const [phase, setPhase] = useState<'welcome' | 'main'>('welcome');
@@ -559,8 +561,16 @@ export default function App() {
         />
       )}
 
-      <HistoryPanel 
-        isOpen={showHistory} 
+      {showKit && (
+        <ResetKit
+          language={language}
+          version={journeyVersion}
+          onClose={() => setShowKit(false)}
+        />
+      )}
+
+      <HistoryPanel
+        isOpen={showHistory}
         onClose={() => setShowHistory(false)} 
         userId={currentUser?.uid || null} 
         healingScore={userHealingScore} 
@@ -592,6 +602,10 @@ export default function App() {
               </div>
               
               <div className="flex items-center gap-6">
+                 <button onClick={() => setShowKit(true)} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-90 hover:opacity-100 transition-opacity rounded-full px-3 py-1.5" style={{ background: 'rgb(var(--tint) / 0.14)', color: 'var(--rose)' }} title={zh ? '急救工具箱 · 情绪足迹' : 'Reset kit · your journey'}>
+                    <LifeBuoy size={15} /> <span>{zh ? '稳一稳' : 'Reset'}</span>
+                 </button>
+
                  <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'}>
                     <Sparkles size={18} />
                  </button>
