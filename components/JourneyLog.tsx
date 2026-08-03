@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TetherState } from '../types';
+import { readOwnJournal } from '../services/journal';
 
 interface LogEntry {
   id: number;
@@ -14,13 +15,8 @@ export const JourneyLog = ({ version, language }: { version: number; language?: 
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   useEffect(() => {
-    // Load logs from local storage
-    try {
-        const data = JSON.parse(localStorage.getItem('tether_journey_log') || '[]');
-        setLogs(data);
-    } catch (e) {
-        console.error("Failed to load journey logs", e);
-    }
+    // Load only the current identity's own entries
+    setLogs(readOwnJournal() as LogEntry[]);
   }, [version]);
 
   // Helper to calculate color based on emotion (matching App.tsx logic)

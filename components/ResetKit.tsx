@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Wind, Anchor, Heart, Inbox, ChevronLeft } from 'lucide-react';
+import { readOwnJournal } from '../services/journal';
 
 // A small "in-the-moment reset" toolkit + your emotion journal, in one place: evidence-based
 // micro-tools for when things feel like too much (paced breathing, 5-4-3-2-1 grounding, a
@@ -16,7 +17,7 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
   const [tool, setTool] = useState<Tool>('menu');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   useEffect(() => {
-    try { setLogs(JSON.parse(localStorage.getItem('tether_journey_log') || '[]')); } catch {}
+    setLogs(readOwnJournal() as LogEntry[]);
   }, [version]);
 
   useEffect(() => {

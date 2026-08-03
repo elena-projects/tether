@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowRight, Heart } from 'lucide-react';
 import { Language } from '../types';
+import { readOwnJournal } from '../services/journal';
 
 interface Props {
   username: string;
@@ -34,9 +35,7 @@ const WelcomeBack: React.FC<Props> = ({ username, language, healingScore, rememb
         ? (zh ? '上次你有点难。希望你现在，稍微好了一点点。' : 'Last time was hard. I hope today feels a little softer.')
         : (zh ? '慢慢来，今天也好好陪陪自己。' : 'No rush — be gentle with yourself today.');
 
-  const journey: LogEntry[] = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('tether_journey_log') || '[]'); } catch { return []; }
-  }, []);
+  const journey: LogEntry[] = useMemo(() => readOwnJournal() as LogEntry[], []);
 
   const seen = useMemo(() => {
     const n = parseInt(localStorage.getItem('tether_seen_healing') || '0', 10);

@@ -11,6 +11,7 @@ import LandingOverlay from './components/LandingOverlay';
 import HistoryPanel from './components/HistoryPanel';
 import { JourneyLog } from './components/JourneyLog';
 import ResetKit from './components/ResetKit';
+import { appendJournal } from './services/journal';
 import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
@@ -235,11 +236,7 @@ export default function App() {
     const word = state.valence < 35 ? (zh ? '有点低落' : 'heavy')
       : state.valence > 65 ? (zh ? '还不错' : 'okay')
       : (zh ? '平平的一天' : 'so-so');
-    const entry = { id: Date.now(), timestamp: Date.now(), valence: state.valence, arousal: state.arousal, message: word };
-    try {
-      const hist = JSON.parse(localStorage.getItem('tether_journey_log') || '[]');
-      localStorage.setItem('tether_journey_log', JSON.stringify([entry, ...hist].slice(0, 60)));
-    } catch {}
+    appendJournal({ id: Date.now(), timestamp: Date.now(), valence: state.valence, arousal: state.arousal, message: word });
   }, [phase, hasInteracted, state, zh]);
 
   // --- LISTENERS ---
@@ -327,9 +324,7 @@ export default function App() {
         setLocalAiMessage(fallbackMsg);
 
         // record to the local journey log (feeds the emotion trajectory / weekly recap)
-        const logEntry = { id: Date.now(), timestamp: Date.now(), valence: stateRef.current.valence, arousal: stateRef.current.arousal, message: text };
-        const history = JSON.parse(localStorage.getItem('tether_journey_log') || '[]');
-        localStorage.setItem('tether_journey_log', JSON.stringify([logEntry, ...history]));
+        appendJournal({ id: Date.now(), timestamp: Date.now(), valence: stateRef.current.valence, arousal: stateRef.current.arousal, message: text });
         setJourneyVersion(v => v + 1);
       }, 15000); // Strict 15 Seconds
     }
