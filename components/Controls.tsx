@@ -61,13 +61,13 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
       <div className="space-y-2">
 
         {/* Energy: high (top) */}
-        <div className={`flex justify-center text-[0.625rem] tracking-[0.12em] font-bold opacity-70 pb-1 ${textColor}`}>
+        <div className={`flex justify-center text-[0.625rem] md:text-[0.8rem] tracking-[0.12em] font-bold opacity-70 pb-1 md:pb-2 ${textColor}`}>
              <span>{labels.highEnergy}</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 md:gap-4">
            {/* Mood: low (left) */}
-           <span className={`text-[0.625rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 text-right ${textColor}`}>{labels.unpleasant}</span>
+           <span className={`text-[0.625rem] md:text-[0.8rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 md:w-16 text-right ${textColor}`}>{labels.unpleasant}</span>
 
            {/* Pad Area - Responsive Square */}
            <div
@@ -96,11 +96,11 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
            </div>
 
            {/* Mood: good (right) */}
-           <span className={`text-[0.625rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 text-left ${textColor}`}>{labels.pleasant}</span>
+           <span className={`text-[0.625rem] md:text-[0.8rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 md:w-16 text-left ${textColor}`}>{labels.pleasant}</span>
         </div>
 
         {/* Energy: low (bottom) */}
-        <div className={`flex justify-center text-[0.625rem] tracking-[0.12em] font-bold opacity-70 pt-1 ${textColor}`}>
+        <div className={`flex justify-center text-[0.625rem] md:text-[0.8rem] tracking-[0.12em] font-bold opacity-70 pt-1 md:pt-2 ${textColor}`}>
              <span>{labels.lowEnergy}</span>
         </div>
       </div>

@@ -645,12 +645,12 @@ export default function App() {
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-7 animate-in fade-in duration-700">
-            <p className="text-center text-lg md:text-xl font-serif italic opacity-90 max-w-sm leading-relaxed">
+          <div className="w-full max-w-sm md:max-w-lg mx-auto flex flex-col items-center gap-7 md:gap-6 animate-in fade-in duration-700">
+            <p className="text-center text-lg md:text-2xl font-serif italic opacity-90 max-w-md leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="relative flex justify-center w-52 md:w-56 -my-2">
+            <div className="relative flex justify-center w-52 md:w-64 -my-2 md:-my-8">
                <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
                {isHealing && soundOn && (
                  <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
@@ -660,7 +660,7 @@ export default function App() {
                )}
             </div>
 
-            <div className="w-full max-w-[300px]">
+            <div className="w-full max-w-[300px] md:max-w-[400px]">
               <Controls
                 state={state}
                 onChange={setState}
