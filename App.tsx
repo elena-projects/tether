@@ -599,8 +599,8 @@ export default function App() {
                     )}
                  </button>
 
-                 <button onClick={handleLogout} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '退出登录' : 'Log out'}>
-                    <LogOut size={18} />
+                 <button onClick={handleLogout} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-80 hover:opacity-100 transition-opacity border border-white/40 rounded-full px-3 py-1.5" title={zh ? '离开 Tether' : 'Leave Tether'}>
+                    <LogOut size={14} /> <span>{zh ? '离开' : 'Leave'}</span>
                  </button>
 
                 <div className="text-xs tracking-widest uppercase border border-white/50 px-2 py-1 rounded-sm backdrop-blur-sm">
