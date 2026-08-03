@@ -19,36 +19,37 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-      
-      // 1. Fetch Remote History
-      const fetchPromise = userId ? getHistory(userId) : Promise.resolve([]);
-      
-      fetchPromise.then((remoteData) => {
-        // 2. Fetch Local "Sent" Messages — but only the ones that are truly THIS person's:
-        //    same identity id (preserved across sessions when the name matches or they chose
-        //    "remember me"), or the same username. A different user on this browser sees none.
-        const currentName = (localStorage.getItem('tether_username') || '').trim().toLowerCase();
-        const localSent = (JSON.parse(localStorage.getItem('my_sent_messages') || '[]') as any[])
-          .filter((m) => (m.uid && m.uid === userId) || (m.owner && currentName && m.owner.trim().toLowerCase() === currentName));
+    if (!isOpen) return;
+    setLoading(true);
 
-        // Transform local messages to match history shape somewhat
-        const formattedLocal = localSent.map((msg: any) => ({
-            id: msg.id,
-            timestamp: msg.timestamp,
-            state: { valence: 70, arousal: 50 }, // Mock anchored state
-            note: `Sent to ${msg.target}: "${msg.text}"`,
-            isSent: true // Custom flag for UI
-        }));
+    // 1. Your OWN sent messages — read synchronously from local storage, independent of the
+    //    network, so a slow/failed Firebase fetch can never hide the kind words you sent.
+    //    Only the ones truly yours: same identity id, or same username (a different user on
+    //    this browser sees none).
+    const currentName = (localStorage.getItem('tether_username') || '').trim().toLowerCase();
+    let localSent: any[] = [];
+    try {
+      localSent = (JSON.parse(localStorage.getItem('my_sent_messages') || '[]') as any[])
+        .filter((m) => (m.uid && m.uid === userId) || (m.owner && currentName && (m.owner || '').trim().toLowerCase() === currentName));
+    } catch {}
+    const formattedLocal = localSent.map((msg: any) => ({
+      id: msg.id,
+      timestamp: msg.timestamp,
+      state: { valence: 70, arousal: 50 }, // Mock anchored state
+      note: `Sent: "${msg.text}"`,
+      isSent: true,
+    }));
 
-        // 3. Merge and Sort (Newest first)
-        const combined = [...remoteData, ...formattedLocal].sort((a, b) => b.timestamp - a.timestamp);
-        
-        setHistory(combined);
-        setLoading(false);
-      });
-    }
+    // Show the local record immediately, then merge remote history when/if it arrives.
+    setHistory([...formattedLocal].sort((a, b) => b.timestamp - a.timestamp));
+
+    // 2. Remote history (check-ins) — best-effort; a rejection must not blank the panel.
+    const remotePromise = userId ? getHistory(userId).catch(() => []) : Promise.resolve([]);
+    remotePromise.then((remoteData: any[]) => {
+      const combined = [...(remoteData || []), ...formattedLocal].sort((a, b) => b.timestamp - a.timestamp);
+      setHistory(combined);
+      setLoading(false);
+    });
   }, [isOpen, userId]);
 
   const formatDate = (ts: number) => {
