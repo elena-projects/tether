@@ -128,11 +128,15 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
       // --- Wholeness/Crack Logic with Healing ---
       // Feeling low (low valence) fractures the orb; it visually mends as healingProgressRef
       // rises during a soothing breath, even before the underlying mood changes.
+      // Wholeness is remapped so the orb stays a coherent single sphere at neutral/positive
+      // mood (≥45) and only visibly cracks apart as mood drops toward the low end — the
+      // fragments then read as "fragile right now" instead of being ambient noise.
       const visualBodyState = Math.min(100, state.valence + (healingProgressRef.current * 50));
-      
-      const segmentCount = visualBodyState > 95 ? 1 : Math.max(2, Math.floor(60 - (visualBodyState / 2))); 
-      const gapSize = visualBodyState > 95 ? 0 : (100 - visualBodyState) * 0.005; 
-      const displacement = visualBodyState > 95 ? 0 : (100 - visualBodyState) * 0.5;
+      const wholeness = Math.max(0, Math.min(1, (visualBodyState - 15) / 30)); // 0 at ≤15, 1 at ≥45
+
+      const segmentCount = wholeness > 0.92 ? 1 : Math.max(2, Math.floor((1 - wholeness) * 32) + 2);
+      const gapSize = wholeness > 0.92 ? 0 : (1 - wholeness) * 0.26;
+      const displacement = wholeness > 0.92 ? 0 : (1 - wholeness) * 22;
 
       const pie = d3.pie<number>().value(1).padAngle(gapSize).sort(null);
       const data = new Array(segmentCount).fill(1);
@@ -187,9 +191,9 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
       // --- Inner Core ---
       if (state.valence > 5 || isHealing) {
           group.append("circle")
-              .attr("r", radius * 0.7)
+              .attr("r", radius * 0.9)
               .attr("fill", color)
-              .attr("opacity", isHealing ? 0.4 + (breathCycle * 0.3) : 0.6 + (state.valence / 250)); 
+              .attr("opacity", isHealing ? 0.4 + (breathCycle * 0.3) : 0.6 + (state.valence / 250));
       }
 
       // --- Text Update (Inhale / Exhale) ---

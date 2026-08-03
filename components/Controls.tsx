@@ -55,7 +55,7 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
   };
 
   return (
-    <div className="w-full max-w-md mx-auto space-y-6 mt-4 select-none touch-none">
+    <div className="w-full max-w-md mx-auto space-y-3 select-none touch-none">
       
       {/* 2D Emotion Pad */}
       <div className="space-y-1">

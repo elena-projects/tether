@@ -645,12 +645,12 @@ export default function App() {
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full flex flex-col items-center gap-7 animate-in fade-in duration-700">
+          <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-4 animate-in fade-in duration-700">
             <p className="text-center text-lg md:text-xl font-serif italic opacity-90 max-w-sm leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="relative filter drop-shadow-[0_0_15px_rgba(255,255,255,0.15)] flex justify-center">
+            <div className="relative flex justify-center w-52 md:w-56 -my-3">
                <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
                {isHealing && soundOn && (
                  <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
@@ -660,7 +660,7 @@ export default function App() {
                )}
             </div>
 
-            <div className="relative w-full max-w-md">
+            <div className="relative w-full max-w-[320px]">
               <Controls
                 state={state}
                 onChange={setState}
@@ -672,11 +672,10 @@ export default function App() {
                 }}
               />
               {!hasInteracted && (
-                <div className="pointer-events-none absolute inset-0 -top-8 flex flex-col items-center justify-start z-10 animate-in fade-in duration-1000">
-                   <div className="bg-teal-900/80 border border-teal-400/30 text-teal-100 text-xs tracking-widest uppercase py-2 px-4 rounded-full shadow-lg backdrop-blur-md animate-bounce">
-                     {zh ? '滑动，让环境与你的内在同步。' : 'Slide to sync the environment with your inner world.'}
+                <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center z-10 animate-in fade-in duration-1000">
+                   <div className="text-[11px] tracking-widest uppercase py-1.5 px-4 rounded-full shadow-lg animate-bounce text-center max-w-[85%]" style={{ background: 'var(--rose)', color: '#2b2420' }}>
+                     {zh ? '滑动这里，同步你的内在' : 'Drag here to tune in'}
                    </div>
-                   <div className="w-px h-8 bg-gradient-to-b from-teal-400/50 to-transparent"></div>
                 </div>
               )}
             </div>
