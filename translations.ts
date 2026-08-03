@@ -7,11 +7,11 @@ export const translations = {
     arousal: "ENERGY LEVEL",
     body: "PHYSICAL SENSE",
     
-    // Axis Labels
-    unpleasant: "HEAVY & DARK",
-    pleasant: "CLEAR & BRIGHT",
-    lowEnergy: "STILL & FADING",
-    highEnergy: "VIBRANT & ELECTRIC",
+    // Axis Labels — 4 concrete words on the pad's edges (energy top/bottom, mood left/right)
+    unpleasant: "Rough",
+    pleasant: "Good",
+    lowEnergy: "Drained",
+    highEnergy: "Energized",
     shattered: "SHATTERED",
     whole: "WHOLE",
 
@@ -55,10 +55,10 @@ export const translations = {
     arousal: "强度",
     body: "躯体",
 
-    unpleasant: "不适",
-    pleasant: "愉悦",
-    lowEnergy: "低能量",
-    highEnergy: "高能量",
+    unpleasant: "低落",
+    pleasant: "舒畅",
+    lowEnergy: "疲惫",
+    highEnergy: "充盈",
     shattered: "难以忍受",
     whole: "完好如初",
 

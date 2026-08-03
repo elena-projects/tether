@@ -60,23 +60,19 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
       {/* 2D Emotion Pad */}
       <div className="space-y-2">
 
-        {/* Y Axis: Top Label */}
-        <div className="flex justify-center items-end text-[0.625rem] tracking-widest font-bold opacity-60 h-4">
+        {/* Energy: high (top) */}
+        <div className={`flex justify-center text-[0.625rem] tracking-[0.12em] font-bold opacity-70 pb-1 ${textColor}`}>
              <span>{labels.highEnergy}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-           {/* Y Axis: Title (Rotated) */}
-           <div className="h-full min-h-[150px] flex items-center justify-center">
-             <span className="text-[0.625rem] tracking-[0.2em] font-bold opacity-50 -rotate-90 whitespace-nowrap">
-                {labels.arousal}
-             </span>
-           </div>
+        <div className="flex items-center gap-3">
+           {/* Mood: low (left) */}
+           <span className={`text-[0.625rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 text-right ${textColor}`}>{labels.unpleasant}</span>
 
            {/* Pad Area - Responsive Square */}
-           <div 
+           <div
              ref={padRef}
-             className="relative w-full aspect-square bg-white/10 border border-white/20 cursor-crosshair rounded-md overflow-hidden backdrop-blur-sm touch-none"
+             className="relative flex-1 aspect-square bg-white/10 border border-white/20 cursor-crosshair rounded-lg overflow-hidden backdrop-blur-sm touch-none"
              onPointerDown={handlePointerDown}
              onPointerMove={handlePointerMove}
              onPointerUp={handlePointerUp}
@@ -90,32 +86,22 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
               />
 
               {/* The Dot */}
-              <div 
+              <div
                 className="absolute w-4 h-4 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)] transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-75 ease-out pointer-events-none"
                 style={{
                   left: `${state.valence}%`,
                   top: `${100 - state.arousal}%`,
                 }}
               />
-              
-              {/* Corner Labels (Semantics) */}
-              <span className="absolute top-2 left-2 text-[8px] opacity-30 pointer-events-none">暴风</span>
-              <span className="absolute top-2 right-2 text-[8px] opacity-30 pointer-events-none">烈日</span>
-              <span className="absolute bottom-2 left-2 text-[8px] opacity-30 pointer-events-none">阴雨</span>
-              <span className="absolute bottom-2 right-2 text-[8px] opacity-30 pointer-events-none">晴朗</span>
            </div>
+
+           {/* Mood: good (right) */}
+           <span className={`text-[0.625rem] tracking-[0.12em] font-bold opacity-70 shrink-0 w-14 text-left ${textColor}`}>{labels.pleasant}</span>
         </div>
 
-        {/* Y Axis: Bottom Label */}
-        <div className="flex justify-center text-[0.625rem] tracking-widest font-bold opacity-60">
+        {/* Energy: low (bottom) */}
+        <div className={`flex justify-center text-[0.625rem] tracking-[0.12em] font-bold opacity-70 pt-1 ${textColor}`}>
              <span>{labels.lowEnergy}</span>
-        </div>
-
-        {/* X Axis Labels */}
-        <div className="flex justify-between items-center text-[0.625rem] tracking-widest opacity-60 px-0 pt-3">
-            <span className="w-1/3 text-left">{labels.unpleasant}</span>
-            <span className="w-1/3 text-center font-bold opacity-80">{labels.valence}</span>
-            <span className="w-1/3 text-right">{labels.pleasant}</span>
         </div>
       </div>
 

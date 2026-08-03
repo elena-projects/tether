@@ -645,50 +645,42 @@ export default function App() {
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-3xl mx-auto flex flex-col items-center animate-in fade-in duration-700">
-            <p className="text-center text-lg md:text-xl font-serif italic opacity-90 max-w-sm leading-relaxed mb-8 md:mb-12">
+          <div className="w-full max-w-sm mx-auto flex flex-col items-center gap-7 animate-in fade-in duration-700">
+            <p className="text-center text-lg md:text-xl font-serif italic opacity-90 max-w-sm leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            {/* Stacked on mobile; orb + controls sit side-by-side and centered on desktop so
-                the pair fills the width instead of floating in a narrow column. */}
-            <div className="w-full flex flex-col items-center md:flex-row md:items-center md:justify-center gap-6 md:gap-16">
-
-              <div className="relative flex justify-center shrink-0 w-52 md:w-72 -my-2 md:my-0">
-                 <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
-                 {isHealing && soundOn && (
-                   <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
-                      <Volume2 size={12} />
-                      <span className="text-[9px] tracking-widest uppercase">{zh ? '双耳疗愈音已开启' : 'Binaural Drone Active'}</span>
-                   </div>
-                 )}
-              </div>
-
-              <div className="flex flex-col items-center gap-6 w-full md:w-auto">
-                <div className="w-full max-w-[300px]">
-                  <Controls
-                    state={state}
-                    onChange={setState}
-                    textColor={theme.text}
-                    labels={{
-                      valence: t.valence, arousal: t.arousal,
-                      unpleasant: t.unpleasant, pleasant: t.pleasant,
-                      lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
-                    }}
-                  />
-                </div>
-
-                <p className={`text-[11px] tracking-widest uppercase text-center transition-opacity duration-700 ${hasInteracted ? 'opacity-0' : 'opacity-70 animate-pulse'}`} style={{ color: 'var(--rose)' }}>
-                  {zh ? '拖动圆点，同步你的内在' : 'Drag the dot to tune in'}
-                </p>
-
-                <button onClick={() => setStep('reflect')} className="group flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
-                  <span className="font-bold">{zh ? '就先这样，继续' : 'Continue'}</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-
+            <div className="relative flex justify-center w-52 md:w-56 -my-2">
+               <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
+               {isHealing && soundOn && (
+                 <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
+                    <Volume2 size={12} />
+                    <span className="text-[9px] tracking-widest uppercase">{zh ? '双耳疗愈音已开启' : 'Binaural Drone Active'}</span>
+                 </div>
+               )}
             </div>
+
+            <div className="w-full max-w-[300px]">
+              <Controls
+                state={state}
+                onChange={setState}
+                textColor={theme.text}
+                labels={{
+                  valence: t.valence, arousal: t.arousal,
+                  unpleasant: t.unpleasant, pleasant: t.pleasant,
+                  lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
+                }}
+              />
+            </div>
+
+            <p className={`text-[11px] tracking-widest uppercase text-center leading-relaxed max-w-[280px] transition-opacity duration-700 ${hasInteracted ? 'opacity-0' : 'opacity-75 animate-pulse'}`} style={{ color: 'var(--rose)' }}>
+              {zh ? '拖动圆点，选出现在的心情和能量' : 'Drag to set your mood and energy'}
+            </p>
+
+            <button onClick={() => setStep('reflect')} className="group flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
+              <span className="font-bold">{zh ? '就先这样，继续' : 'Continue'}</span>
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
           )}
 
