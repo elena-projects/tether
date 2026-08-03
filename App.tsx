@@ -54,7 +54,13 @@ export default function App() {
   // App State
   const [state, setState] = useState<TetherState>(INITIAL_STATE);
   const [role, setRole] = useState<TetherRole>(TetherRole.WITNESS);
-  const [language, setLanguage] = useState<Language>(() => (typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('zh')) ? 'zh' : 'en');
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('tether_lang') : null;
+    if (saved === 'zh' || saved === 'en') return saved as Language;
+    return (typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('zh')) ? 'zh' : 'en';
+  });
+  // Change language and remember it, so the choice sticks (and can be toggled in-app, not just on the landing screen).
+  const changeLang = (lang: Language) => { setLanguage(lang); try { localStorage.setItem('tether_lang', lang); } catch {} };
   const [bgColor, setBgColor] = useState<string>('rgb(0,0,0)');
 
   // --- Day / Night theme (defaults to the calm warm-dark "night"; manual toggle locks it) ---
@@ -549,7 +555,7 @@ export default function App() {
 
   return (
     <>
-      {showLanding && <LandingOverlay onEnter={handleLogin} language={language} setLanguage={setLanguage} />}
+      {showLanding && <LandingOverlay onEnter={handleLogin} language={language} setLanguage={changeLang} />}
 
       {currentUser && !showLanding && phase === 'welcome' && (
         <WelcomeBack
@@ -629,6 +635,10 @@ export default function App() {
 
                  <button onClick={toggleMode} className="opacity-70 hover:opacity-100 transition-opacity" title={mode === 'day' ? '夜间模式' : '日间模式'}>
                     {mode === 'day' ? <Moon size={18} /> : <Sun size={18} />}
+                 </button>
+
+                 <button onClick={() => changeLang(zh ? 'en' : 'zh')} className="text-[13px] font-bold tracking-widest opacity-70 hover:opacity-100 transition-opacity" title={zh ? 'Switch to English' : '切换成中文'}>
+                    {zh ? 'EN' : '中'}
                  </button>
 
                  <button onClick={() => setShowHistory(true)} className="opacity-70 hover:opacity-100 transition-opacity relative">
