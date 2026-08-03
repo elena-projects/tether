@@ -12,6 +12,7 @@ import HistoryPanel from './components/HistoryPanel';
 import { JourneyLog } from './components/JourneyLog';
 import ResetKit from './components/ResetKit';
 import { appendJournal } from './services/journal';
+import { appendSent } from './services/sent';
 import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
@@ -448,11 +449,7 @@ export default function App() {
 
     // Keep a private record of the kind words YOU sent, tagged with your identity so only
     // you see them back (a different person on this browser won't inherit them).
-    try {
-      const rec = { id: Date.now(), timestamp: Date.now(), text: textToSend, target: sentTarget, uid: currentUser.uid, owner: currentUser.username };
-      const prev = JSON.parse(localStorage.getItem('my_sent_messages') || '[]');
-      localStorage.setItem('my_sent_messages', JSON.stringify([rec, ...prev].slice(0, 50)));
-    } catch {}
+    appendSent({ id: Date.now(), timestamp: Date.now(), text: textToSend, target: sentTarget });
 
     try { localStorage.setItem('tether_last_action', 'helped'); } catch {}
     (window as any).gtag?.('event', 'tether_send_message');

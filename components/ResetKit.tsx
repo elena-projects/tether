@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Wind, Anchor, Heart, Inbox, ChevronLeft } from 'lucide-react';
 import { readOwnJournal } from '../services/journal';
+import { readOwnSent, SentMessage } from '../services/sent';
 
 // A small "in-the-moment reset" toolkit + your emotion journal, in one place: evidence-based
 // micro-tools for when things feel like too much (paced breathing, 5-4-3-2-1 grounding, a
@@ -16,8 +17,10 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
   const zh = language === 'zh';
   const [tool, setTool] = useState<Tool>('menu');
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [sent, setSent] = useState<SentMessage[]>([]);
   useEffect(() => {
     setLogs(readOwnJournal() as LogEntry[]);
+    setSent(readOwnSent());
   }, [version]);
 
   useEffect(() => {
@@ -66,7 +69,7 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
                   </span>
                 </button>
               ))}
-              <RecentNotes zh={zh} logs={logs} />
+              <SentNotes zh={zh} sent={sent} />
             </div>
           )}
           {tool === 'breathe' && <Breathe zh={zh} />}
@@ -258,23 +261,27 @@ const MoodTrend: React.FC<{ zh: boolean; logs: LogEntry[] }> = ({ zh, logs }) =>
   );
 };
 
-const RecentNotes: React.FC<{ zh: boolean; logs: LogEntry[] }> = ({ zh, logs }) => {
-  if (logs.length === 0) return null;
-  const recent = logs.slice(0, 4);
+// The kind words you've sent out — a gentle reminder, in a soothing moment, of the light
+// you've given others. (Distinct from the mood curve above, which is your own check-ins.)
+const SentNotes: React.FC<{ zh: boolean; sent: SentMessage[] }> = ({ zh, sent }) => {
   return (
     <div className="pt-3">
-      <p className="text-[11px] tracking-widest uppercase font-bold opacity-40 px-1 mb-2">{zh ? '你最近说过的话' : 'What you told yourself lately'}</p>
-      <div className="space-y-2">
-        {recent.map((l) => (
-          <div key={l.id} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'rgb(var(--tint) / 0.04)' }}>
-            <span className="shrink-0 w-2.5 h-2.5 rounded-full mt-1.5" style={{ background: entryColor(l.valence, l.arousal), boxShadow: `0 0 6px ${entryColor(l.valence, l.arousal)}` }} />
-            <div className="min-w-0">
-              <p className="text-[13px] leading-snug opacity-85 font-serif italic break-words">"{l.message}"</p>
-              <p className="text-[10px] opacity-30 font-mono mt-1">{new Date(l.timestamp).toLocaleDateString()} · {new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+      <p className="text-[11px] tracking-widest uppercase font-bold opacity-40 px-1 mb-2">{zh ? '你送出的暖心话' : 'Kind words you’ve sent'}</p>
+      {sent.length === 0 ? (
+        <p className="text-[12px] opacity-45 leading-relaxed px-1">{zh ? '你送给别人的每一句暖心话，都会留在这里。' : 'Every kind word you send someone will gather here.'}</p>
+      ) : (
+        <div className="space-y-2">
+          {sent.slice(0, 5).map((m) => (
+            <div key={m.id} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'rgb(var(--tint) / 0.04)' }}>
+              <Heart size={13} className="shrink-0 mt-1" style={{ color: 'var(--rose)' }} />
+              <div className="min-w-0">
+                <p className="text-[13px] leading-snug opacity-85 font-serif italic break-words">"{m.text}"</p>
+                <p className="text-[10px] opacity-30 font-mono mt-1">{new Date(m.timestamp).toLocaleDateString()} · {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

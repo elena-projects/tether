@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Clock, Activity, Heart, Award, Send } from 'lucide-react';
 import { getHistory } from '../services/firebase';
+import { readOwnSent } from '../services/sent';
 import { HistoryEntry, TetherState } from '../types';
 
 interface HistoryPanelProps {
@@ -24,15 +25,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
 
     // 1. Your OWN sent messages — read synchronously from local storage, independent of the
     //    network, so a slow/failed Firebase fetch can never hide the kind words you sent.
-    //    Only the ones truly yours: same identity id, or same username (a different user on
-    //    this browser sees none).
-    const currentName = (localStorage.getItem('tether_username') || '').trim().toLowerCase();
-    let localSent: any[] = [];
-    try {
-      localSent = (JSON.parse(localStorage.getItem('my_sent_messages') || '[]') as any[])
-        .filter((m) => (m.uid && m.uid === userId) || (m.owner && currentName && (m.owner || '').trim().toLowerCase() === currentName));
-    } catch {}
-    const formattedLocal = localSent.map((msg: any) => ({
+    const formattedLocal = readOwnSent().map((msg) => ({
       id: msg.id,
       timestamp: msg.timestamp,
       state: { valence: 70, arousal: 50 }, // Mock anchored state
