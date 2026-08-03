@@ -118,3 +118,44 @@ export const generateFallbackMessage = async (state: TetherState, language: Lang
     return "You are seen in the dark.";
   }
 };
+
+/**
+ * REFLECT — a warm, witnessing reply to a private self-reflection the user just wrote in the
+ * Reset Kit. Only they see it. Validates and reflects back with warmth; never advice, never
+ * judgment. If the words sound like real danger, it gently encourages reaching out for help.
+ */
+export const reflectReply = async (text: string, language: Language): Promise<string> => {
+  const fallback = language === 'zh'
+    ? '谢谢你把它说出来。此刻，就让自己被这样听见，已经很好了。'
+    : "Thank you for putting it into words. For now, just let yourself be heard — that's enough.";
+  if (!apiKey) return fallback;
+
+  const prompt = `
+    You are a warm, gentle companion inside a mental-health app for teenagers. The user has just
+    written down, privately, what they are noticing or feeling right now. Only they will read
+    your reply.
+
+    Reply in ${language}, in 1–2 short sentences. GENTLY WITNESS and VALIDATE what they shared:
+    reflect it back with warmth, name the feeling if it's clear, let them feel heard.
+    - Never judge, lecture, diagnose, or give advice or fixes.
+    - Never minimize or rush them ("it'll be fine", "cheer up", "at least...").
+    - No clichés. Sound like a caring human, not a poster.
+    - If their words suggest they might be in real danger or thinking of hurting themselves,
+      warmly and without alarm encourage them to reach out to someone they trust or a helpline,
+      and remind them they don't have to carry it alone.
+
+    Their words: "${text}"
+
+    Return ONLY the reply text, in ${language}.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    return response.text?.trim() || fallback;
+  } catch (error) {
+    return fallback;
+  }
+};

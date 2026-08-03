@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Wind, Anchor, Heart, Inbox, ChevronLeft } from 'lucide-react';
+import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, PenLine, History, Loader2 } from 'lucide-react';
 import { readOwnJournal } from '../services/journal';
 import { readOwnSent, SentMessage } from '../services/sent';
+import { readOwnWorries, appendWorry, updateWorry, Worry, WorryOutcome } from '../services/worries';
+import { reflectReply } from '../services/geminiService';
 
 // A small "in-the-moment reset" toolkit + your emotion journal, in one place: evidence-based
 // micro-tools for when things feel like too much (paced breathing, 5-4-3-2-1 grounding, a
@@ -11,7 +13,7 @@ import { readOwnSent, SentMessage } from '../services/sent';
 interface LogEntry { id: number; timestamp: number; valence: number; arousal: number; message: string; }
 
 type Props = { language: 'en' | 'zh' | string; onClose: () => void; onUsed?: (tool: string) => void; version?: number };
-type Tool = 'menu' | 'breathe' | 'ground' | 'kind' | 'worry';
+type Tool = 'menu' | 'breathe' | 'ground' | 'reflect' | 'kind' | 'worry' | 'worries';
 
 const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) => {
   const zh = language === 'zh';
@@ -32,8 +34,9 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
   const items: { key: Tool; icon: React.ReactNode; title: string; sub: string }[] = [
     { key: 'breathe', icon: <Wind size={20} />, title: zh ? '跟着呼吸' : 'Breathe', sub: zh ? '慢下来，几口气就好' : 'Slow down in a few breaths' },
     { key: 'ground', icon: <Anchor size={20} />, title: zh ? '回到当下' : 'Ground', sub: zh ? '5-4-3-2-1，把自己拉回来' : '5-4-3-2-1, come back to now' },
+    { key: 'reflect', icon: <PenLine size={20} />, title: zh ? '写下此刻' : 'Say what’s here', sub: zh ? '说说你看到、感觉到什么' : 'Notice what you see and feel' },
     { key: 'kind', icon: <Heart size={20} />, title: zh ? '善待自己' : 'Be kind' , sub: zh ? '像对朋友一样对自己' : 'Speak to yourself like a friend' },
-    { key: 'worry', icon: <Inbox size={20} />, title: zh ? '放下担忧' : 'Set it aside', sub: zh ? '把烦恼写下、先收起来' : 'Write the worry down, put it away' },
+    { key: 'worry', icon: <Inbox size={20} />, title: zh ? '放下担忧' : 'Set it aside', sub: zh ? '写下、收起来，之后再回看' : 'Set it down, look back later' },
   ];
 
   const enter = (t: Tool) => { setTool(t); onUsed?.(t); };
@@ -74,8 +77,10 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
           )}
           {tool === 'breathe' && <Breathe zh={zh} />}
           {tool === 'ground' && <Ground zh={zh} />}
+          {tool === 'reflect' && <Reflect zh={zh} language={language} />}
           {tool === 'kind' && <Kind zh={zh} />}
-          {tool === 'worry' && <Worry zh={zh} onDone={() => setTool('menu')} />}
+          {tool === 'worry' && <WorryTool zh={zh} onDone={() => setTool('menu')} onReview={() => setTool('worries')} />}
+          {tool === 'worries' && <Worries zh={zh} />}
         </div>
       </div>
     </div>
@@ -147,45 +152,113 @@ const Ground: React.FC<{ zh: boolean }> = ({ zh }) => {
   );
 };
 
-// ---- Self-compassion break (Neff's three steps) ----
+// ---- Self-compassion via the "friend" reframe: what would you tell a friend? → say it to
+//      yourself. Concrete and self-explanatory, where an abstract mantra wasn't landing. ----
 const Kind: React.FC<{ zh: boolean }> = ({ zh }) => {
-  const lines = zh
-    ? ['这是一个难受的时刻。', '难受，是每个人都会经历的——你不是一个人。', '愿我能像对最好的朋友那样，对自己温柔一点。']
-    : ['This is a moment of suffering.', 'Suffering is part of being human — you are not alone in this.', 'May I be as kind to myself as I would be to a dear friend.'];
-  const [i, setI] = useState(0);
-  const last = i >= lines.length - 1;
+  const [text, setText] = useState('');
+  const [done, setDone] = useState(false);
   return (
-    <div className="flex flex-col items-center text-center py-8 min-h-[16rem] justify-center">
-      <Heart size={26} style={{ color: 'var(--rose)' }} className="mb-6 opacity-80" />
-      <p className="text-lg font-serif leading-relaxed max-w-[18rem] transition-opacity duration-500">{lines[i]}</p>
-      <div className="flex items-center gap-2 mt-8">
-        {lines.map((_, k) => <span key={k} className="w-1.5 h-1.5 rounded-full" style={{ background: k === i ? 'var(--rose)' : 'rgb(var(--tint) / 0.2)' }} />)}
+    <div className="py-4 min-h-[15rem]">
+      {!done ? (
+        <>
+          <p className="text-[12px] opacity-55 leading-relaxed mb-2">{zh ? '我们常常对别人很温柔，却对自己很苛刻。' : "We're often gentle with others, yet hard on ourselves."}</p>
+          <p className="text-[15px] font-semibold leading-relaxed mb-4">{zh ? '如果此刻，是你最好的朋友这样难受，你会对TA说什么？' : 'If your closest friend felt exactly this way right now, what would you say to them?'}</p>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus
+            placeholder={zh ? '我会对TA说……' : "I'd tell them…"}
+            className="w-full p-3 rounded-2xl text-[14px] resize-none outline-none text-white placeholder-white/30"
+            style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.15)' }} />
+          <button onClick={() => text.trim() && setDone(true)} disabled={!text.trim()} className="mt-4 w-full py-3 rounded-full font-bold text-sm text-white disabled:opacity-40" style={{ background: 'var(--rose)' }}>
+            {zh ? '写好了' : 'Done'}
+          </button>
+        </>
+      ) : (
+        <div className="flex flex-col items-center text-center py-4">
+          <Heart size={26} style={{ color: 'var(--rose)' }} className="mb-4 opacity-80" />
+          <p className="text-[13px] opacity-60 mb-3">{zh ? '现在，把这句话，也送给你自己：' : 'Now, say these same words to yourself:'}</p>
+          <p className="text-lg font-serif leading-relaxed max-w-[18rem]" style={{ color: 'var(--rose)' }}>"{text.trim()}"</p>
+          <p className="text-[12px] opacity-55 mt-5 max-w-[17rem] leading-relaxed">{zh ? '你也一样，值得这份温柔。' : 'You, too, deserve that same kindness.'}</p>
+          <button onClick={() => { setText(''); setDone(false); }} className="mt-6 text-[13px] opacity-60 hover:opacity-100 underline">{zh ? '再想一句' : 'Again'}</button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---- Reflect: write what you're noticing, get a warm witnessing reply from the AI. ----
+const Reflect: React.FC<{ zh: boolean; language: string }> = ({ zh, language }) => {
+  const [text, setText] = useState('');
+  const [reply, setReply] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [crisis, setCrisis] = useState(false);
+  const crisisRe = /(自杀|自残|不想活|想死|活不下去|结束自己|撑不下去|kill myself|end my life|suicid|self[-\s]?harm|hurt myself)/i;
+
+  const submit = async () => {
+    if (!text.trim() || loading) return;
+    setCrisis(crisisRe.test(text));
+    setLoading(true);
+    try {
+      const r = await reflectReply(text.trim(), language as any);
+      setReply(r);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center text-center py-16 min-h-[15rem]">
+      <Loader2 size={22} className="animate-spin mb-3" style={{ color: 'var(--rose)' }} />
+      <p className="text-[13px] opacity-60">{zh ? '在认真听……' : 'Listening…'}</p>
+    </div>
+  );
+
+  if (reply) return (
+    <div className="py-3 min-h-[15rem]">
+      <div className="p-3 rounded-2xl mb-4" style={{ background: 'rgb(var(--tint) / 0.05)' }}>
+        <p className="text-[13px] opacity-65 italic font-serif break-words leading-relaxed">"{text.trim()}"</p>
       </div>
-      <button onClick={() => setI(last ? 0 : i + 1)} className="mt-7 px-8 py-3 rounded-full font-bold text-sm text-white" style={{ background: 'var(--rose)' }}>
-        {last ? (zh ? '再读一遍' : 'Read it again') : (zh ? '继续' : 'Next')}
+      <div className="flex items-start gap-3">
+        <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5" style={{ background: 'rgb(var(--tint) / 0.10)', color: 'var(--rose)' }}><Heart size={15} /></span>
+        <p className="text-[15px] leading-relaxed font-serif break-words flex-1">{reply}</p>
+      </div>
+      {crisis && (
+        <p className="mt-5 text-[12px] leading-relaxed p-3 rounded-xl" style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }}>
+          {zh ? '如果这份难受太重了，别一个人扛。和你信任的人说说，或拨打心理援助热线。你值得被好好接住。💗' : "If this feels like too much, please don't carry it alone — reach out to someone you trust, or a helpline. You deserve to be held. 💗"}
+        </p>
+      )}
+      <button onClick={() => { setText(''); setReply(null); setCrisis(false); }} className="mt-6 text-[13px] opacity-60 hover:opacity-100 underline">{zh ? '再写一段' : 'Write again'}</button>
+    </div>
+  );
+
+  return (
+    <div className="py-4">
+      <p className="text-[13px] opacity-70 leading-relaxed mb-4">{zh ? '此刻你看到、感觉到什么？写下来，我在听。' : "What are you noticing or feeling right now? Write it down — I'm listening."}</p>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus
+        placeholder={zh ? '此刻……' : 'Right now…'}
+        className="w-full p-3 rounded-2xl text-[14px] resize-none outline-none text-white placeholder-white/30"
+        style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.15)' }} />
+      <button onClick={submit} disabled={!text.trim()} className="mt-4 w-full py-3 rounded-full font-bold text-sm text-white disabled:opacity-40" style={{ background: 'var(--rose)' }}>
+        {zh ? '说给它听' : 'Share it'}
       </button>
     </div>
   );
 };
 
 // ---- Worry postponement ----
-const Worry: React.FC<{ zh: boolean; onDone: () => void }> = ({ zh, onDone }) => {
+const WorryTool: React.FC<{ zh: boolean; onDone: () => void; onReview: () => void }> = ({ zh, onDone, onReview }) => {
   const [text, setText] = useState('');
   const [saved, setSaved] = useState(false);
   const put = () => {
     if (!text.trim()) return;
-    try {
-      const list = JSON.parse(localStorage.getItem('tether_worries') || '[]');
-      localStorage.setItem('tether_worries', JSON.stringify([{ text: text.trim(), t: Date.now() }, ...list].slice(0, 50)));
-    } catch {}
+    appendWorry(text.trim());
     setSaved(true);
   };
   if (saved) return (
     <div className="flex flex-col items-center text-center py-10 min-h-[14rem] justify-center">
       <Inbox size={30} style={{ color: 'var(--rose)' }} className="mb-4" />
       <p className="text-base font-semibold">{zh ? '已经帮你收好了。' : "It's put away for now."}</p>
-      <p className="text-[13px] opacity-60 mt-2 max-w-[17rem] leading-relaxed">{zh ? '它不会跑掉，你晚点想的时候还在。现在，先让自己歇一会儿。' : "It won't disappear — it'll be here when you're ready. For now, let yourself rest."}</p>
+      <p className="text-[13px] opacity-60 mt-2 max-w-[17rem] leading-relaxed">{zh ? '它不会跑掉。过些天你可以回来看看，它到底有没有发生。' : "It won't disappear. Come back in a while and see whether it actually happened."}</p>
       <button onClick={onDone} className="mt-6 px-8 py-3 rounded-full font-bold text-sm text-white" style={{ background: 'var(--rose)' }}>{zh ? '好' : 'Okay'}</button>
+      <button onClick={onReview} className="mt-3 text-[13px] opacity-60 hover:opacity-100 underline">{zh ? '回看以前的担忧' : 'Look back at past worries'}</button>
     </div>
   );
   return (
@@ -198,6 +271,73 @@ const Worry: React.FC<{ zh: boolean; onDone: () => void }> = ({ zh, onDone }) =>
       <button onClick={put} disabled={!text.trim()} className="mt-4 w-full py-3 rounded-full font-bold text-sm text-white disabled:opacity-40" style={{ background: 'var(--rose)' }}>
         {zh ? '先放下，晚点再想' : 'Set it aside for now'}
       </button>
+      <button onClick={onReview} className="mt-4 w-full text-[13px] opacity-55 hover:opacity-90 underline flex items-center justify-center gap-1.5">
+        <History size={13} /> {zh ? '回看以前写下的担忧' : 'Look back at past worries'}
+      </button>
+    </div>
+  );
+};
+
+// ---- Worry look-back: mark whether each past worry actually happened, add what you learned,
+//      and see — in your own record — how many never came true. ----
+const Worries: React.FC<{ zh: boolean }> = ({ zh }) => {
+  const [list, setList] = useState<Worry[]>(() => readOwnWorries());
+  const refresh = () => setList(readOwnWorries());
+  const setOutcome = (id: number, outcome: WorryOutcome) => { updateWorry(id, { outcome }); refresh(); };
+  const saveNote = (id: number, note: string) => updateWorry(id, { note });
+
+  const opts: { key: WorryOutcome; label: string }[] = zh
+    ? [{ key: 'none', label: '没发生' }, { key: 'partial', label: '发生一点' }, { key: 'came_true', label: '真的发生了' }]
+    : [{ key: 'none', label: "Didn't happen" }, { key: 'partial', label: 'A little' }, { key: 'came_true', label: 'It happened' }];
+
+  const resolved = list.filter((w) => w.outcome);
+  const notHappened = resolved.filter((w) => w.outcome === 'none').length;
+
+  if (list.length === 0) return (
+    <div className="flex flex-col items-center text-center py-14 min-h-[13rem] justify-center">
+      <History size={26} style={{ color: 'var(--rose)' }} className="mb-4 opacity-70" />
+      <p className="text-[13px] opacity-55 max-w-[17rem] leading-relaxed">{zh ? '你还没有写下过担忧。写下来的担忧会收在这里，过些天你就能回看它们有没有成真。' : "You haven't set any worries down yet. The ones you do will gather here, so you can look back and see whether they came true."}</p>
+    </div>
+  );
+
+  return (
+    <div className="py-3">
+      {resolved.length >= 2 && (
+        <div className="p-3 rounded-2xl mb-4 text-[13px] leading-relaxed" style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }}>
+          {zh
+            ? <>在你回看的 <b>{resolved.length}</b> 个担忧里，<b style={{ color: 'var(--rose)' }}>{notHappened}</b> 个最后并没有发生。 🌱</>
+            : <>Of the <b>{resolved.length}</b> worries you've looked back on, <b style={{ color: 'var(--rose)' }}>{notHappened}</b> never happened. 🌱</>}
+        </div>
+      )}
+      <div className="space-y-3">
+        {list.map((w) => (
+          <div key={w.id} className="p-4 rounded-2xl" style={{ background: 'rgb(var(--tint) / 0.05)', border: '1px solid rgb(var(--tint) / 0.1)' }}>
+            <p className="text-[14px] font-serif italic leading-relaxed break-words opacity-90">"{w.text}"</p>
+            <p className="text-[10px] opacity-30 font-mono mt-1 mb-3">{new Date(w.t).toLocaleDateString()}</p>
+            <p className="text-[11px] uppercase tracking-widest opacity-40 mb-2">{zh ? '后来呢？' : 'What happened?'}</p>
+            <div className="flex gap-2">
+              {opts.map((o) => {
+                const active = w.outcome === o.key;
+                return (
+                  <button key={o.key} onClick={() => setOutcome(w.id, o.key)}
+                    className="flex-1 py-2 rounded-full text-[12px] font-bold transition-all"
+                    style={active
+                      ? { background: 'var(--rose)', color: '#2b2420' }
+                      : { background: 'rgb(var(--tint) / 0.07)', color: 'rgb(var(--tint) / 0.7)' }}>
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+            {w.outcome && (
+              <textarea defaultValue={w.note || ''} onBlur={(e) => saveNote(w.id, e.target.value)} rows={2}
+                placeholder={zh ? '后来实际发生了什么？或者你学到了什么？' : 'What actually happened? Or what did you learn?'}
+                className="mt-3 w-full p-3 rounded-xl text-[13px] resize-none outline-none text-white placeholder-white/25"
+                style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }} />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
