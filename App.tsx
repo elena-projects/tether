@@ -614,7 +614,7 @@ export default function App() {
                 <h1 className="text-xl tracking-[0.3em] font-bold drop-shadow-sm">TETHER</h1>
               </div>
               
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 md:flex-nowrap md:gap-6">
                  <button onClick={() => setShowKit(true)} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-90 hover:opacity-100 transition-opacity rounded-full px-3 py-1.5" style={{ background: 'rgb(var(--tint) / 0.14)', color: 'var(--rose)' }} title={zh ? '急救工具箱 · 情绪足迹' : 'Reset kit · your journey'}>
                     <LifeBuoy size={15} /> <span>{zh ? '稳一稳' : 'Reset'}</span>
                  </button>
