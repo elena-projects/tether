@@ -26,9 +26,13 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
       const fetchPromise = userId ? getHistory(userId) : Promise.resolve([]);
       
       fetchPromise.then((remoteData) => {
-        // 2. Fetch Local "Sent" Messages
-        const localSent = JSON.parse(localStorage.getItem('my_sent_messages') || '[]');
-        
+        // 2. Fetch Local "Sent" Messages — but only the ones that are truly THIS person's:
+        //    same identity id (preserved across sessions when the name matches or they chose
+        //    "remember me"), or the same username. A different user on this browser sees none.
+        const currentName = (localStorage.getItem('tether_username') || '').trim().toLowerCase();
+        const localSent = (JSON.parse(localStorage.getItem('my_sent_messages') || '[]') as any[])
+          .filter((m) => (m.uid && m.uid === userId) || (m.owner && currentName && m.owner.trim().toLowerCase() === currentName));
+
         // Transform local messages to match history shape somewhat
         const formattedLocal = localSent.map((msg: any) => ({
             id: msg.id,

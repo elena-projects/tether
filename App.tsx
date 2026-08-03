@@ -146,10 +146,19 @@ export default function App() {
   }, []);
 
   const handleLogin = (username: string, autoEnter: boolean) => {
-    // Check if we have an existing UID to preserve history, otherwise generate new
+    // Only keep the stored identity (and its history / sent-message record) if this is
+    // genuinely the same person: they typed the same name, or they'd previously chosen
+    // "remember my identity". A different name on a shared browser starts fresh, so nobody
+    // inherits someone else's encouragements or impact.
     const existingUid = localStorage.getItem('tether_uid');
-    const uid = existingUid || 'user_' + Math.random().toString(36).substr(2, 9);
-    
+    const existingUsername = localStorage.getItem('tether_username');
+    const rememberedBefore = localStorage.getItem('tether_auto_enter') === 'true';
+    const sameIdentity = !!existingUid && (
+      rememberedBefore ||
+      (!!existingUsername && existingUsername.trim().toLowerCase() === username.trim().toLowerCase())
+    );
+    const uid = sameIdentity ? existingUid! : 'user_' + Math.random().toString(36).substr(2, 9);
+
     saveUserSession(uid, username);
     setCurrentUser({ uid, username });
     setPhase('welcome');
@@ -433,11 +442,21 @@ export default function App() {
     }
 
     // 3) Deliver to a real drifting user if one is online, otherwise to the public wall.
+    let sentTarget = 'wall';
     try {
       const drifters = await getDriftingUsers(currentUser.uid);
       const targetUid = drifters.length > 0 ? drifters[0].uid : 'wall';
+      sentTarget = targetUid === 'wall' ? 'wall' : 'someone';
       await sendTetherMessage({ uid: currentUser.uid, name: currentUser.username }, targetUid, textToSend, 'human');
     } catch (e) { console.warn('send failed', e); }
+
+    // Keep a private record of the kind words YOU sent, tagged with your identity so only
+    // you see them back (a different person on this browser won't inherit them).
+    try {
+      const rec = { id: Date.now(), timestamp: Date.now(), text: textToSend, target: sentTarget, uid: currentUser.uid, owner: currentUser.username };
+      const prev = JSON.parse(localStorage.getItem('my_sent_messages') || '[]');
+      localStorage.setItem('my_sent_messages', JSON.stringify([rec, ...prev].slice(0, 50)));
+    } catch {}
 
     try { localStorage.setItem('tether_last_action', 'helped'); } catch {}
     (window as any).gtag?.('event', 'tether_send_message');
