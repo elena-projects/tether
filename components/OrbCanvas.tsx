@@ -125,76 +125,16 @@ const OrbCanvas: React.FC<OrbCanvasProps> = ({ state, isHealing = false, isPulsi
       }
       const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 
-      // --- Wholeness/Crack Logic with Healing ---
-      // Feeling low (low valence) fractures the orb; it visually mends as healingProgressRef
-      // rises during a soothing breath, even before the underlying mood changes.
-      // Wholeness is remapped so the orb stays a coherent single sphere at neutral/positive
-      // mood (≥45) and only visibly cracks apart as mood drops toward the low end — the
-      // fragments then read as "fragile right now" instead of being ambient noise.
-      const visualBodyState = Math.min(100, state.valence + (healingProgressRef.current * 50));
-      const wholeness = Math.max(0, Math.min(1, (visualBodyState - 15) / 30)); // 0 at ≤15, 1 at ≥45
-
-      const segmentCount = wholeness > 0.92 ? 1 : Math.max(2, Math.floor((1 - wholeness) * 32) + 2);
-      const gapSize = wholeness > 0.92 ? 0 : (1 - wholeness) * 0.26;
-      const displacement = wholeness > 0.92 ? 0 : (1 - wholeness) * 22;
-
-      const pie = d3.pie<number>().value(1).padAngle(gapSize).sort(null);
-      const data = new Array(segmentCount).fill(1);
-      const arcs = pie(data);
-
-      const arcGenerator = d3.arc<any>()
-        .innerRadius(radius - 2)
-        .outerRadius(radius + 2)
-        .cornerRadius(2);
-
       const group = svg.append("g")
         .attr("class", "orb-group")
         .attr("transform", `translate(${centerX}, ${centerY})`)
-        .style("filter", "url(#glow)"); 
+        .style("filter", "url(#glow)");
 
-      // --- Draw Segments ---
-      group.selectAll("path")
-        .data(arcs)
-        .enter()
-        .append("path")
-        .attr("d", arcGenerator)
+      // --- A single soft, glowing orb — no surrounding fragments or ring ---
+      group.append("circle")
+        .attr("r", radius)
         .attr("fill", color)
-        .attr("stroke", `hsl(${hue}, ${saturation}%, ${lightness + 20}%)`)
-        .attr("stroke-width", 1)
-        .attr("transform", (d, i) => {
-           let jitterX = 0;
-           let jitterY = 0;
-           
-           // Reduce jitter during healing
-           const arousalFactor = isHealing ? Math.max(0, state.arousal - (healingProgressRef.current * 100)) : state.arousal;
-
-           if (arousalFactor > 70) {
-              const intensity = (arousalFactor - 70) * 0.05;
-              jitterX = (Math.random() - 0.5) * intensity;
-              jitterY = (Math.random() - 0.5) * intensity;
-           }
-
-           if (displacement > 0) {
-             const [x, y] = arcGenerator.centroid(d);
-             const dist = Math.sqrt(x*x + y*y);
-             // Pull pieces back together if healing
-             const currentDisplacement = displacement * (1 - healingProgressRef.current);
-             
-             const moveX = (x / dist) * currentDisplacement;
-             const moveY = (y / dist) * currentDisplacement;
-             const shardJitter = (Math.sin(i * 132.1) * (100 - visualBodyState) * 0.1); 
-             return `translate(${moveX + shardJitter + jitterX}, ${moveY + shardJitter + jitterY})`;
-           }
-           return `translate(${jitterX}, ${jitterY})`;
-        });
-
-      // --- Inner Core ---
-      if (state.valence > 5 || isHealing) {
-          group.append("circle")
-              .attr("r", radius * 0.9)
-              .attr("fill", color)
-              .attr("opacity", isHealing ? 0.4 + (breathCycle * 0.3) : 0.6 + (state.valence / 250));
-      }
+        .attr("opacity", isHealing ? 0.6 + (breathCycle * 0.25) : 0.78 + (state.valence / 450));
 
       // --- Text Update (Inhale / Exhale) ---
       if (isHealing) {
