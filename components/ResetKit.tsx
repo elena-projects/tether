@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2 } from 'lucide-react';
+import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2, Check } from 'lucide-react';
 import { readOwnJournal } from '../services/journal';
 import { readOwnSent, SentMessage } from '../services/sent';
 import { readOwnWorries, appendWorry, updateWorry, Worry, WorryOutcome } from '../services/worries';
@@ -259,7 +259,14 @@ const Worries: React.FC<{ zh: boolean }> = ({ zh }) => {
   const [list, setList] = useState<Worry[]>(() => readOwnWorries());
   const refresh = () => setList(readOwnWorries());
   const setOutcome = (id: number, outcome: WorryOutcome) => { updateWorry(id, { outcome }); refresh(); };
-  const saveNote = (id: number, note: string) => updateWorry(id, { note });
+  const saveNote = (id: number, note: string) => { updateWorry(id, { note }); refresh(); };
+
+  // A warm one-liner the moment you mark how a worry turned out — so it feels resolved.
+  const affirm = (o: WorryOutcome) => o === 'none'
+    ? (zh ? '🌱 你看，它没有发生。当时的担心，这次落空了。' : "🌱 See — it didn't happen. Your worry didn't come true this time.")
+    : o === 'partial'
+    ? (zh ? '发生了一点点，但也没到你担心的那么糟吧？' : "A little did happen — but not as bad as you'd feared, was it?")
+    : (zh ? '它确实发生了，而你也一路走到了现在。' : "It did happen — and you made it through to now.");
 
   const opts: { key: WorryOutcome; label: string }[] = zh
     ? [{ key: 'none', label: '没发生' }, { key: 'partial', label: '发生一点' }, { key: 'came_true', label: '真的发生了' }]
@@ -305,10 +312,16 @@ const Worries: React.FC<{ zh: boolean }> = ({ zh }) => {
               })}
             </div>
             {w.outcome && (
-              <textarea defaultValue={w.note || ''} onBlur={(e) => saveNote(w.id, e.target.value)} rows={2}
-                placeholder={zh ? '后来实际发生了什么？或者你学到了什么？' : 'What actually happened? Or what did you learn?'}
-                className="mt-3 w-full p-3 rounded-xl text-[13px] resize-none outline-none text-white placeholder-white/25"
-                style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }} />
+              <>
+                <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: 'var(--rose)' }}>{affirm(w.outcome)}</p>
+                <textarea defaultValue={w.note || ''} onBlur={(e) => saveNote(w.id, e.target.value)} rows={2}
+                  placeholder={zh ? '想的话，写一句：后来实际发生了什么？学到了什么？' : 'If you like, jot a line: what actually happened? What did you learn?'}
+                  className="mt-2 w-full p-3 rounded-xl text-[13px] resize-none outline-none text-white placeholder-white/25"
+                  style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }} />
+                {w.note && w.note.trim() && (
+                  <p className="mt-1.5 text-[11px] opacity-50 flex items-center gap-1" style={{ color: 'var(--rose)' }}><Check size={12} /> {zh ? '已记下' : 'Saved'}</p>
+                )}
+              </>
             )}
           </div>
         ))}
