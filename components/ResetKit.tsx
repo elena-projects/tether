@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2, Check } from 'lucide-react';
+import { X, Wind, Anchor, Heart, Inbox, ChevronLeft, History, Loader2, Check, Send } from 'lucide-react';
 import { readOwnJournal } from '../services/journal';
 import { readOwnSent, SentMessage } from '../services/sent';
 import { readOwnWorries, appendWorry, updateWorry, Worry, WorryOutcome } from '../services/worries';
-import { groundingReply } from '../services/geminiService';
+import { groundingReply, worryReply } from '../services/geminiService';
 
 // A small "in-the-moment reset" toolkit + your emotion journal, in one place: evidence-based
 // micro-tools for when things feel like too much (paced breathing, 5-4-3-2-1 grounding, a
@@ -77,7 +77,7 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
           {tool === 'breathe' && <Breathe zh={zh} />}
           {tool === 'ground' && <Ground zh={zh} language={language} />}
           {tool === 'kind' && <Kind zh={zh} />}
-          {tool === 'worry' && <WorryTool zh={zh} onDone={() => setTool('menu')} onReview={() => setTool('worries')} />}
+          {tool === 'worry' && <WorryTool zh={zh} language={language} onDone={() => setTool('menu')} onReview={() => setTool('worries')} />}
           {tool === 'worries' && <Worries zh={zh} />}
         </div>
       </div>
@@ -219,32 +219,64 @@ const Kind: React.FC<{ zh: boolean }> = ({ zh }) => {
 };
 
 // ---- Worry postponement ----
-const WorryTool: React.FC<{ zh: boolean; onDone: () => void; onReview: () => void }> = ({ zh, onDone, onReview }) => {
+const WorryTool: React.FC<{ zh: boolean; language: string; onDone: () => void; onReview: () => void }> = ({ zh, language, onDone, onReview }) => {
   const [text, setText] = useState('');
-  const [saved, setSaved] = useState(false);
-  const put = () => {
-    if (!text.trim()) return;
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [reply, setReply] = useState<string | null>(null);
+  const [crisis, setCrisis] = useState(false);
+  const crisisRe = /(自杀|自残|不想活|想死|活不下去|结束自己|撑不下去|kill myself|end my life|suicid|self[-\s]?harm|hurt myself)/i;
+
+  const send = async () => {
+    if (!text.trim() || loading) return;
+    setCrisis(crisisRe.test(text));
     appendWorry(text.trim());
-    setSaved(true);
+    setLoading(true);
+    try { setReply(await worryReply(text.trim(), language as any)); }
+    finally { setLoading(false); setSent(true); }
   };
-  if (saved) return (
-    <div className="flex flex-col items-center text-center py-10 min-h-[14rem] justify-center">
-      <Inbox size={30} style={{ color: 'var(--rose)' }} className="mb-4" />
-      <p className="text-base font-semibold">{zh ? '已经帮你收好了。' : "It's put away for now."}</p>
-      <p className="text-[13px] opacity-60 mt-2 max-w-[17rem] leading-relaxed">{zh ? '它不会跑掉。过些天你可以回来看看，它到底有没有发生。' : "It won't disappear. Come back in a while and see whether it actually happened."}</p>
-      <button onClick={onDone} className="mt-6 px-8 py-3 rounded-full font-bold text-sm text-white" style={{ background: 'var(--rose)' }}>{zh ? '好' : 'Okay'}</button>
-      <button onClick={onReview} className="mt-3 text-[13px] opacity-60 hover:opacity-100 underline">{zh ? '回看以前的担忧' : 'Look back at past worries'}</button>
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center text-center py-16 min-h-[15rem]">
+      <Loader2 size={22} className="animate-spin mb-3" style={{ color: 'var(--rose)' }} />
+      <p className="text-[13px] opacity-60">{zh ? '在认真听……' : 'Listening…'}</p>
     </div>
   );
+
+  if (sent) return (
+    <div className="py-4 min-h-[15rem]">
+      <div className="flex flex-col items-center text-center mb-4">
+        <Inbox size={26} style={{ color: 'var(--rose)' }} className="mb-3" />
+        <p className="text-base font-semibold">{zh ? '已经帮你收好了。' : "It's put away for now."}</p>
+      </div>
+      {reply && (
+        <div className="flex items-start gap-3 mb-2">
+          <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-0.5" style={{ background: 'rgb(var(--tint) / 0.10)', color: 'var(--rose)' }}><Heart size={15} /></span>
+          <p className="text-[15px] leading-relaxed font-serif break-words flex-1">{reply}</p>
+        </div>
+      )}
+      {crisis && (
+        <p className="mt-3 text-[12px] leading-relaxed p-3 rounded-xl" style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.12)' }}>
+          {zh ? '如果这份难受太重了，别一个人扛。和你信任的人说说，或拨打心理援助热线。你值得被好好接住。💗' : "If this feels like too much, please don't carry it alone — reach out to someone you trust, or a helpline. You deserve to be held. 💗"}
+        </p>
+      )}
+      <p className="text-[12px] opacity-50 text-center leading-relaxed mt-4">{zh ? '过些天回来看看，它到底有没有发生。' : 'Come back in a while and see whether it actually happened.'}</p>
+      <div className="flex flex-col items-center">
+        <button onClick={onDone} className="mt-5 px-8 py-3 rounded-full font-bold text-sm text-white" style={{ background: 'var(--rose)' }}>{zh ? '好' : 'Okay'}</button>
+        <button onClick={onReview} className="mt-3 text-[13px] opacity-60 hover:opacity-100 underline">{zh ? '回看以前的担忧' : 'Look back at past worries'}</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="py-4">
-      <p className="text-[13px] opacity-70 leading-relaxed mb-4">{zh ? '把此刻最缠着你的担忧写下来。写下来，就可以先把它放到一边，晚点再处理。' : "Write down the worry that's clinging to you. Naming it lets you set it aside and come back to it later."}</p>
+      <p className="text-[13px] opacity-70 leading-relaxed mb-4">{zh ? '把此刻最缠着你的担忧写下来，发出去——写下来、说出来，就可以先放到一边。' : "Write down the worry that's clinging to you and send it off — naming it lets you set it aside for now."}</p>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus
         placeholder={zh ? '我在担心……' : "I'm worried about…"}
         className="w-full p-3 rounded-2xl text-[14px] resize-none outline-none text-white placeholder-white/30"
         style={{ background: 'rgb(var(--tint) / 0.06)', border: '1px solid rgb(var(--tint) / 0.15)' }} />
-      <button onClick={put} disabled={!text.trim()} className="mt-4 w-full py-3 rounded-full font-bold text-sm text-white disabled:opacity-40" style={{ background: 'var(--rose)' }}>
-        {zh ? '先放下，晚点再想' : 'Set it aside for now'}
+      <button onClick={send} disabled={!text.trim()} className="mt-4 w-full py-3 rounded-full font-bold text-sm text-white disabled:opacity-40 flex items-center justify-center gap-2" style={{ background: 'var(--rose)' }}>
+        <Send size={15} /> {zh ? '发送，先放下它' : 'Send it off'}
       </button>
       <button onClick={onReview} className="mt-4 w-full text-[13px] opacity-55 hover:opacity-90 underline flex items-center justify-center gap-1.5">
         <History size={13} /> {zh ? '回看以前写下的担忧' : 'Look back at past worries'}

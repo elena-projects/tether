@@ -199,3 +199,44 @@ export const groundingReply = async (noticed: string, language: Language): Promi
     return fallback;
   }
 };
+
+/**
+ * WORRY reply — after the user writes down a worry to set aside. Warmly acknowledges the
+ * specific worry without dismissing it, honours that naming it is a kind thing to do, and gently
+ * reminds them they can look back later to see how it turns out.
+ */
+export const worryReply = async (text: string, language: Language): Promise<string> => {
+  const fallback = language === 'zh'
+    ? '把它写下来，已经是在照顾自己了。先放这儿，过些天你可以回来看看它到底有没有发生。'
+    : "Writing it down is already looking after yourself. Leave it here for now — you can come back later and see whether it actually happened.";
+  if (!apiKey) return fallback;
+
+  const prompt = `
+    A teenager in a mental-health app just wrote down a worry that's on their mind, in order to
+    set it aside for now. Only they will read your reply.
+
+    Reply in ${language}, in 1–2 short, warm, natural sentences — like a caring friend.
+    - Gently acknowledge THEIR specific worry and that it makes sense to feel this way.
+    - Do NOT dismiss it or promise it'll be fine ("don't worry", "it'll be okay", "nothing to
+      worry about"). No advice, no fixing, no lecturing, no clichés.
+    - You may gently note that naming a worry and setting it down is a kind thing to do, and that
+      they can look back later to see how it turns out.
+    - If it suggests they might be in real danger or thinking of hurting themselves, warmly
+      encourage them to reach out to someone they trust or a helpline.
+    - Sound like a real person — plain and warm.
+
+    Their worry: "${text}"
+
+    Return ONLY the reply, in ${language}.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+    return response.text?.trim() || fallback;
+  } catch (error) {
+    return fallback;
+  }
+};
