@@ -17,6 +17,7 @@ import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
+import FeedbackWidget from './components/FeedbackWidget';
 import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
@@ -920,6 +921,9 @@ export default function App() {
         </main>
 
       </div>
+
+      {/* feedback is reachable from anywhere in the app, but stays out of the way on the landing screen */}
+      {!showLanding && <FeedbackWidget language={language} />}
     </>
   );
 }
