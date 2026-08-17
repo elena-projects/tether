@@ -78,20 +78,38 @@ function poll(fetcher: () => Promise<void>, interval = 6000) {
   let stopped = false;
   const tick = async () => {
     if (stopped) return;
-    try { await fetcher(); } catch {}
+    // Don't spend the reader's battery — or our Firebase quota — on a tab nobody is looking at.
+    if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+      try { await fetcher(); } catch {}
+    }
     if (!stopped) setTimeout(tick, interval);
   };
   tick();
   return () => { stopped = true; };
 }
 
+// Several listeners (the wall, the inbox, the spotlight, the vote tally) each want the
+// whole message list on their own timer. Left alone they fire near-identical requests a
+// second apart. One short-lived shared promise collapses them into a single fetch.
+let messagesCache: { at: number; value: Promise<Message[]> } | null = null;
+
 const allMessages = async (): Promise<Message[]> => {
-  const obj = await rGet('messages');
-  if (!obj) return [];
-  return Object.entries<any>(obj).map(([id, d]) => ({
-    id, text: d.text, senderName: d.senderName, senderId: d.senderId,
-    targetId: d.targetId, timestamp: d.timestamp || 0, voteCount: d.voteCount || 0, type: d.type,
-  }));
+  const now = Date.now();
+  if (messagesCache && now - messagesCache.at < 4000) return messagesCache.value;
+
+  const value = (async (): Promise<Message[]> => {
+    const obj = await rGet('messages');
+    if (!obj) return [];
+    return Object.entries<any>(obj).map(([id, d]) => ({
+      id, text: d.text, senderName: d.senderName, senderId: d.senderId,
+      targetId: d.targetId, timestamp: d.timestamp || 0, voteCount: d.voteCount || 0, type: d.type,
+    }));
+  })();
+
+  messagesCache = { at: now, value };
+  // A failed fetch must not be cached, or every listener retries the same rejection.
+  value.catch(() => { if (messagesCache?.value === value) messagesCache = null; });
+  return value;
 };
 
 // The wall — most recent kind messages everyone has written.
