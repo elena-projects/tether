@@ -20,6 +20,15 @@ export default defineConfig(({ mode }) => {
             secure: true,
             rewrite: (p: string) => p.replace(/^\/rtdb/, ''),
           },
+          // Mirrors the production nginx rule: private talks sit under a secret box.
+          // Locally that box is TALKS_SECRET from .env.local, falling back to a "dev"
+          // box so development never touches real users' messages.
+          '/talks': {
+            target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (p: string) => p.replace(/^\/talks/, `/talks/${env.TALKS_SECRET || 'dev'}`),
+          },
           '/v1beta': {
             target: 'https://generativelanguage.googleapis.com',
             changeOrigin: true,

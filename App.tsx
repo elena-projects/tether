@@ -17,8 +17,11 @@ import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
+import ConfideCompose from './components/ConfideCompose';
+import TalksPanel from './components/TalksPanel';
+import { listenToTalks, myTalks, Talk } from './services/talks';
 import FeedbackWidget from './components/FeedbackWidget';
-import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
+import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy, MessageCircle } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
   valence: 50,
@@ -46,6 +49,9 @@ export default function App() {
   const [showSafety, setShowSafety] = useState(false);   // crisis-support screen
   const [showKit, setShowKit] = useState(false);         // reset kit + emotion journal
   const [showWall, setShowWall] = useState(false);       // always-on "kind words" wall
+  const [showTalks, setShowTalks] = useState(false);     // bounded one-to-one exchanges
+  const [talks, setTalks] = useState<Talk[]>([]);
+  const [confideTo, setConfideTo] = useState<Message | null>(null);   // wall message being answered
   // Post-login flow: 'welcome' (a calm "remember you" screen) → 'main' (the dashboard).
   const [phase, setPhase] = useState<'welcome' | 'main'>('welcome');
   // Within the main phase, a gentle 3-step ritual instead of one dense dashboard.
@@ -130,6 +136,9 @@ export default function App() {
   const [demoStream, setDemoStream] = useState<Message[]>(streamMessages['en']);
   const t = getTranslation(language);
   const zh = language === 'zh';
+  // Requests still waiting on my answer — the only thing worth a badge.
+  const pendingTalks = talks.filter((t) => t.status === 'pending' && t.toId === currentUser?.uid).length;
+  const refreshTalks = async () => { if (currentUser) setTalks(await myTalks(currentUser.uid)); };
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -251,6 +260,9 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     
+    // Requests and replies in the bounded one-to-one channel.
+    const unsubTalks = listenToTalks(currentUser.uid, setTalks);
+
     // Listen for messages targeted specifically to this user (targetId == currentUser.uid)
     const unsubInbox = listenToInbox(currentUser.uid, (msgs) => {
       setInbox(msgs);
@@ -276,7 +288,7 @@ export default function App() {
     const unsubWall = listenToWall((msgs) => setWallMessages(msgs));
 
     return () => {
-      unsubInbox();
+      unsubInbox(); unsubTalks();
       unsubSpotlight();
       unsubHealing();
       unsubWall();
@@ -578,6 +590,29 @@ export default function App() {
           onVote={handleVote}
           language={language}
           onClose={() => setShowWall(false)}
+          myUid={currentUser?.uid}
+          onConfide={currentUser ? (msg) => { setShowWall(false); setConfideTo(msg); } : undefined}
+        />
+      )}
+
+      {confideTo && currentUser && (
+        <ConfideCompose
+          message={confideTo}
+          me={currentUser}
+          language={language}
+          onClose={() => { setConfideTo(null); refreshTalks(); }}
+          onNeedHelp={() => { setConfideTo(null); setShowSafety(true); }}
+        />
+      )}
+
+      {showTalks && currentUser && (
+        <TalksPanel
+          talks={talks}
+          me={currentUser}
+          language={language}
+          onClose={() => setShowTalks(false)}
+          onChanged={refreshTalks}
+          onNeedHelp={() => { setShowTalks(false); setShowSafety(true); }}
         />
       )}
 
@@ -628,6 +663,14 @@ export default function App() {
 
                  <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'}>
                     <Sparkles size={18} />
+                 </button>
+
+                 <button onClick={() => setShowTalks(true)} className="relative opacity-70 hover:opacity-100 transition-opacity" title={zh ? '说说话' : 'Talking'}>
+                    <MessageCircle size={18} />
+                    {pendingTalks > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+                            style={{ background: 'var(--rose)', color: 'var(--bg-base)' }}>{pendingTalks}</span>
+                    )}
                  </button>
 
                  <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-70 hover:opacity-100' : 'opacity-40 hover:opacity-70'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-pressed={soundOn}>

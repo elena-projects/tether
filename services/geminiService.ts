@@ -240,3 +240,79 @@ export const worryReply = async (text: string, language: Language): Promise<stri
     return fallback;
   }
 };
+/**
+ * CONFIDE SCREEN — for a message someone is sending privately to a wall author.
+ *
+ * This is deliberately NOT `moderateContent`. That guard exists to keep the public wall
+ * unfailingly warm, so it blocks anything sad — which is exactly what this channel is for.
+ * Here, pain is the point and must get through. What must not get through is anything that
+ * makes a private line between two teenagers dangerous.
+ *
+ * `crisis` is separate from `allowed`: a message can be perfectly fine to send and still
+ * indicate someone needs more help than a peer can give. The caller decides what to do
+ * with that — it must never be handled by silently dropping the message.
+ *
+ * `screened` says whether the check actually ran. If it didn't, the caller must NOT guess:
+ * treating an outage as a crisis would tell every user their message is too heavy for this
+ * place, and treating it as safe would forward unchecked text to a stranger.
+ */
+export const screenConfide = async (
+  text: string,
+  language: Language,
+): Promise<{ allowed: boolean; crisis: boolean; reason?: string; screened: boolean }> => {
+  if (!apiKey) return { allowed: true, crisis: false, screened: true };
+
+  const prompt = `
+    You are screening a private message a teenager is about to send to another teenager on a
+    mental-health app. The recipient wrote something kind on a public wall; the sender read it
+    and wants to tell them what they are going through.
+
+    IMPORTANT: sadness, loneliness, anxiety, exhaustion, grief, school stress, family trouble,
+    feeling worthless or hopeless — ALL of this is ALLOWED and is the entire purpose of this
+    message. Do not block a message for being heavy, negative, or painful.
+
+    Set "allowed": false ONLY for:
+    - contact details of any kind (phone, email, socials, usernames) or asking to move the
+      conversation elsewhere, meet up, add each other, or send photos
+    - sexual or romantic content, flirting, or comments on the recipient's appearance
+    - hostility, insults, threats, manipulation, or guilt-tripping aimed at the recipient
+    - trying to sell, recruit, promote, or advertise anything
+    - content that is clearly not a genuine personal message (spam, gibberish)
+
+    Set "crisis": true if the message suggests the sender may be in real danger right now —
+    active suicidal intent, a plan or timeframe, ongoing self-harm, or being unsafe at home.
+    General hopelessness or "I feel awful" alone is NOT a crisis. Note that "crisis" is
+    independent of "allowed": a crisis message is usually still allowed.
+
+    Reply in ${language} for "reason", and only when blocking.
+
+    Message: "${text}"
+
+    Return JSON: { "allowed": boolean, "crisis": boolean, "reason": string|null }
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            allowed: { type: Type.BOOLEAN },
+            crisis: { type: Type.BOOLEAN },
+            reason: { type: Type.STRING },
+          },
+          required: ['allowed', 'crisis'],
+        },
+      },
+    });
+    const r = JSON.parse(response.text || '{}');
+    return { allowed: r.allowed !== false, crisis: r.crisis === true, reason: r.reason || undefined, screened: true };
+  } catch {
+    // Couldn't check. Say so plainly and let them retry — inventing a verdict either way
+    // would be worse than admitting the check is down.
+    return { allowed: false, crisis: false, screened: false };
+  }
+};
