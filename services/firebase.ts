@@ -31,8 +31,11 @@ export const loadUserSession = () => ({
 });
 
 // --- Realtime State Sync ---
-export const updateUserState = async (userId: string, username: string, state: TetherState) => {
-  await rPut(`users/${userId}`, { username, state, lastActive: Date.now() });
+// The name is deliberately NOT stored here. This node exists only so someone who is
+// low can be matched with someone willing to send a light, and matching needs a uid and
+// a mood — never a name. Keeping names out means this record can't identify anybody.
+export const updateUserState = async (userId: string, _username: string, state: TetherState) => {
+  await rPut(`users/${userId}`, { state, lastActive: Date.now() });
   await rPost(`history/${userId}`, { state, timestamp: Date.now() });
 };
 
@@ -44,7 +47,7 @@ export const getDriftingUsers = async (currentUserId: string): Promise<UserProfi
   for (const [uid, data] of Object.entries<any>(users)) {
     const isActive = (Date.now() - (data.lastActive || 0)) < 10 * 60 * 1000;
     if (uid !== currentUserId && data.state && data.state.valence < 40 && isActive) {
-      drifters.push({ uid, username: data.username, state: data.state, lastActive: data.lastActive });
+      drifters.push({ uid, username: '', state: data.state, lastActive: data.lastActive });
     }
   }
   return drifters;

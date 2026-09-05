@@ -14,6 +14,14 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
         // Dev mirror of the prod nginx same-origin proxies.
         proxy: {
+          // Must come before the generic '/rtdb' entry — the mood index lives behind a
+          // secret segment in production, and dev has to match.
+          '/rtdb/users': {
+            target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
+            changeOrigin: true,
+            secure: true,
+            rewrite: (p: string) => p.replace(/^\/rtdb\/users/, `/users/${env.DATA_SECRET || 'dev'}`),
+          },
           '/rtdb': {
             target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
             changeOrigin: true,

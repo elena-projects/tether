@@ -4,7 +4,7 @@ FROM nginx:1.27-alpine
 # at start-up, injecting ${GEMINI_API_KEY} and ${TALKS_SECRET} (Cloud Run env vars).
 # NGINX_ENVSUBST_FILTER limits substitution to those vars so nginx's own $host/$1 stay intact.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
-ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET)
+ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET|DATA_SECRET)
 COPY dist /usr/share/nginx/html
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
