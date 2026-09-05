@@ -176,3 +176,28 @@ export const waitingOn = (talk: Talk): 'from' | 'to' | null => {
   const last = talk.turns[talk.turns.length - 1];
   return last?.by === 'from' ? 'to' : 'from';
 };
+
+/**
+ * Send an abuse report to the site owner's private inbox.
+ *
+ * Blocking alone only protects the one person who pressed it — nobody would ever learn
+ * that someone is working through the wall harassing people. This carries the reported
+ * message itself, because a report you can't read is a report you can't act on. The UI
+ * tells the reporter this before they tap it.
+ */
+export const reportTalk = async (talk: Talk, reporterName: string): Promise<boolean> => {
+  const lines = [
+    `举报 · Tether 一对一消息`,
+    `对方: ${talk.fromName || '(无名)'} (${talk.fromId})`,
+    `被举报者写的:`,
+    ...talk.turns.filter((t) => t.by === 'from').map((t) => `  “${t.text}”`),
+  ];
+  try {
+    const res = await fetch('https://elenaprojects.cc/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: lines.join('\n').slice(0, 600), name: reporterName || '匿名', tool: 'report' }),
+    });
+    return res.ok;
+  } catch { return false; }
+};

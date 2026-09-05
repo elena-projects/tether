@@ -4,7 +4,7 @@ import { Language } from '../types';
 import { screenConfide } from '../services/geminiService';
 import {
   Talk, TEXT_LIMIT, acceptTalk, declineTalk, addTurn, askToContinue,
-  agreeToContinue, endTalk, blockUser, sideOf, waitingOn,
+  agreeToContinue, endTalk, blockUser, sideOf, waitingOn, reportTalk,
 } from '../services/talks';
 
 interface Props {
@@ -62,9 +62,13 @@ const TalksPanel: React.FC<Props> = ({ talks, me, language, onClose, onChanged, 
     if (screen.crisis) onNeedHelp();
   };
 
+  // Blocking protects this one person; reporting is what lets the problem be dealt with.
   const block = (talk: Talk) => {
     blockUser(talk.fromId);
-    run(talk.id, () => endTalk(talk.id));
+    run(talk.id, async () => {
+      await reportTalk(talk, me.username);
+      await endTalk(talk.id);
+    });
   };
 
   const label = (t: string) => <p className="text-[10px] tracking-[0.28em] uppercase opacity-45">{t}</p>;
@@ -124,6 +128,9 @@ const TalksPanel: React.FC<Props> = ({ talks, me, language, onClose, onChanged, 
             <p className="text-[12px] font-bold">{zh ? '你现在有力气听吗？' : 'Do you have the energy right now?'}</p>
             <p className="text-[11px] opacity-50 leading-relaxed">
               {zh ? '答应之后才会看到内容。不想听也完全可以 —— 这不是你的责任。' : "You'll only see it if you say yes. Saying no is completely okay — this isn't your job."}
+            </p>
+            <p className="text-[10.5px] opacity-40 leading-relaxed">
+              {zh ? '选「不太合适」会拉黑对方，并把这条发给做这个网站的人看。' : "“Not okay” blocks them and sends the message to whoever runs this site."}
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               <button onClick={() => run(talk.id, () => acceptTalk(talk.id))} disabled={busy === talk.id}
@@ -208,7 +215,7 @@ const TalksPanel: React.FC<Props> = ({ talks, me, language, onClose, onChanged, 
             {incoming && talk.status !== 'closed' && (
               <button onClick={() => block(talk)}
                 className="text-[10px] opacity-35 hover:opacity-80 flex items-center gap-1 pt-1">
-                <ShieldAlert size={10} /> {zh ? '这条让我不舒服' : 'This makes me uncomfortable'}</button>
+                <ShieldAlert size={10} /> {zh ? '这条让我不舒服（举报并拉黑）' : 'This makes me uncomfortable (report & block)'}</button>
             )}
           </>
         )}
