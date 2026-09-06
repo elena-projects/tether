@@ -863,24 +863,43 @@ export default function App() {
                      </div>
                   </div>
 
-                  {(wallMessages.length > 0 ? wallMessages : demoStream).map((msg) => {
-                    const real = wallMessages.length > 0;
+                  {!wallLoaded && (
+                    <p className="text-center text-[12px] opacity-40 py-8">
+                      {zh ? '正在把大家写下的话取过来…' : 'Fetching what people wrote…'}
+                    </p>
+                  )}
+
+                  {wallMessages.map((msg) => {
                     const voted = votedIds.has(msg.id);
                     const named = msg.senderName && !['Guide', '小伙伴', 'AI Companion'].includes(msg.senderName);
+                    // Same rule as the wall panel: you can reach a real person, but not the
+                    // AI and not yourself.
+                    const canReach = msg.type === 'human' && !!msg.senderId && msg.senderId !== currentUser?.uid;
                     return (
                     <div key={msg.id} className={`p-4 border ${theme.uiBorder} bg-white/5 backdrop-blur-md rounded-sm transition-all`}>
                       <p className="text-sm font-serif italic mb-3 drop-shadow-sm">"{msg.text}"</p>
                       <div className="flex justify-between items-center mt-2 text-[10px] opacity-60">
                         <span className="tracking-widest">{named ? `— ${msg.senderName}` : ''}</span>
-                        <button
-                          disabled={!real}
-                          onClick={() => real && handleVote(msg.id)}
-                          title={voted ? (zh ? '取消爱心' : 'remove heart') : (zh ? '给它一颗心' : 'send a heart')}
-                          className={`flex items-center gap-1 transition-colors ${voted ? 'text-teal-300' : real ? 'hover:text-teal-200 cursor-pointer' : 'cursor-default'}`}
-                        >
-                          <span>{msg.voteCount || 0}</span>
-                          <Heart size={11} className={voted ? 'fill-current' : 'fill-white/40'} />
-                        </button>
+                        <div className="flex items-center gap-3">
+                          {canReach && (
+                            <button
+                              onClick={() => setConfideTo(msg)}
+                              title={zh ? '想跟 TA 说说' : 'reach out to them'}
+                              className="flex items-center gap-1 hover:text-teal-200 transition-colors cursor-pointer"
+                            >
+                              <MessageCircle size={11} />
+                              <span className="tracking-widest">{zh ? '说说' : 'talk'}</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleVote(msg.id)}
+                            title={voted ? (zh ? '取消爱心' : 'remove heart') : (zh ? '给它一颗心' : 'send a heart')}
+                            className={`flex items-center gap-1 transition-colors cursor-pointer ${voted ? 'text-teal-300' : 'hover:text-teal-200'}`}
+                          >
+                            <span>{msg.voteCount || 0}</span>
+                            <Heart size={11} className={voted ? 'fill-current' : 'fill-white/40'} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                     );
