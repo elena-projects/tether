@@ -460,11 +460,31 @@ export default function App() {
 
     // 3) Deliver to a real drifting user if one is online, otherwise to the public wall.
     let sentTarget = 'wall';
+    const justSentId = `local-${Date.now()}`;
     try {
       const drifters = await getDriftingUsers(currentUser.uid);
       const targetUid = drifters.length > 0 ? drifters[0].uid : 'wall';
       sentTarget = targetUid === 'wall' ? 'wall' : 'someone';
       await sendTetherMessage({ uid: currentUser.uid, name: currentUser.username }, targetUid, textToSend, 'human');
+
+      // Show it on the wall straight away. The wall refreshes on a 6-second poll, so
+      // without this you can send something, open the wall to check, and not find it —
+      // which reads as "it didn't go through". The next poll replaces the whole list with
+      // the server's, which by then contains the stored copy, so this stand-in is transient.
+      setWallMessages((prev) => {
+        if (prev.some((m) => m.id === justSentId)) return prev;
+        return [{
+          id: justSentId,
+          text: textToSend,
+          senderName: currentUser.username,
+          senderId: currentUser.uid,
+          targetId: targetUid,
+          timestamp: Date.now(),
+          voteCount: 0,
+          type: 'human',
+        }, ...prev];
+      });
+      setWallLoaded(true);
     } catch (e) { console.warn('send failed', e); }
 
     // Keep a private record of the kind words YOU sent, tagged with your identity so only
