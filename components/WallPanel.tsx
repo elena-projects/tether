@@ -6,6 +6,7 @@ interface Props {
   messages: Message[];
   votedIds: Set<string>;
   onVote: (id: string) => void;
+  loading?: boolean;                       // first fetch still in flight
   language: Language;
   onClose: () => void;
   myUid?: string;                          // so we never offer to write to ourselves
@@ -14,7 +15,7 @@ interface Props {
 
 // The "wall" — always reachable from the header, so anyone can read the kind words
 // others have written (and add a heart), whatever mood they're in.
-const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, language, onClose, myUid, onConfide }) => {
+const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, loading, language, onClose, myUid, onConfide }) => {
   const zh = language === 'zh';
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -35,7 +36,13 @@ const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, language, onCl
         </div>
 
         <div className="overflow-y-auto no-scrollbar p-5 space-y-3">
-          {messages.length === 0 ? (
+          {loading ? (
+            /* Placeholder words used to fill this gap, but they looked exactly like real ones —
+               and carried no author and no way to reach anybody, so the wall seemed inert. */
+            <p className="text-center text-[13px] opacity-40 py-16 leading-relaxed">
+              {zh ? '正在把大家写下的话取过来…' : 'Fetching what people wrote…'}
+            </p>
+          ) : messages.length === 0 ? (
             <p className="text-center text-[13px] opacity-50 py-16 leading-relaxed">{zh ? '还没有人写下暖心话，\n来做第一个吧 🌱' : 'No kind words yet —\nbe the first 🌱'}</p>
           ) : (
             messages.map((msg) => {

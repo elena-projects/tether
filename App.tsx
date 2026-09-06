@@ -112,6 +112,7 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sendWarning, setSendWarning] = useState("");     // Guardian blocked the message
   const [wallMessages, setWallMessages] = useState<Message[]>([]); // real "kind words" wall
+  const [wallLoaded, setWallLoaded] = useState(false);   // false until the first fetch comes back
   const wallRef = useRef<Message[]>([]);
   useEffect(() => { wallRef.current = wallMessages; }, [wallMessages]); // latest wall, readable inside the drift timer
   const [feedback, setFeedback] = useState<{type: 'success' | 'error' | null, msg: string}>({ type: null, msg: '' });
@@ -285,7 +286,7 @@ export default function App() {
        });
     });
 
-    const unsubWall = listenToWall((msgs) => setWallMessages(msgs));
+    const unsubWall = listenToWall((msgs) => { setWallMessages(msgs); setWallLoaded(true); });
 
     return () => {
       unsubInbox(); unsubTalks();
@@ -585,7 +586,8 @@ export default function App() {
 
       {showWall && (
         <WallPanel
-          messages={wallMessages.length > 0 ? wallMessages : demoStream}
+          messages={wallMessages}
+          loading={!wallLoaded}
           votedIds={votedIds}
           onVote={handleVote}
           language={language}
