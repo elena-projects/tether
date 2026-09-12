@@ -1007,7 +1007,7 @@ export default function App() {
       </div>
 
       {/* feedback is reachable from anywhere in the app, but stays out of the way on the landing screen */}
-      {!showLanding && <FeedbackWidget language={language} />}
+      {!showLanding && <FeedbackWidget language={language} onNeedHelp={() => setShowSafety(true)} />}
     </>
   );
 }

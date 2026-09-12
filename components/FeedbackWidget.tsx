@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, LifeBuoy } from 'lucide-react';
 import { Language } from '../types';
+import { screenConfide } from '../services/geminiService';
 
 /**
  * FEEDBACK WIDGET
@@ -12,15 +13,23 @@ import { Language } from '../types';
  *
  * Posts to the shared endpoint on the portfolio origin (CORS-allowlisted for this
  * subdomain); the note lands in a private inbox, never shown publicly.
+ *
+ * People do not always use this box for feedback. On an app about how you feel, an
+ * invitation to write to a real person is sometimes the only thing on screen that looks
+ * like it will listen — someone has already written "I really want somebody to love me"
+ * here. That note reaches a private inbox that may not be read for days, so anything
+ * suggesting real distress must not be answered with "thanks for the feedback" and
+ * nothing else. It still gets sent; the difference is that help is offered straight away.
  */
 
 const ENDPOINT = 'https://elenaprojects.cc/api/feedback';
 
 interface FeedbackWidgetProps {
   language: Language;
+  onNeedHelp: () => void;      // opens the real-help screen
 }
 
-const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
+const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp }) => {
   const zh = language === 'zh';
 
   const [open, setOpen] = useState(false);
@@ -28,6 +37,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
   const [name, setName] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [reachedOut, setReachedOut] = useState(false);   // the note read as real distress
   const [error, setError] = useState('');
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -43,7 +53,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
   const close = () => {
     setOpen(false);
     // Reset a little later so the closing transition doesn't flash the empty form.
-    window.setTimeout(() => { if (sent) { setSent(false); setText(''); setName(''); } setError(''); }, 300);
+    window.setTimeout(() => { if (sent) { setSent(false); setReachedOut(false); setText(''); setName(''); } setError(''); }, 300);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -62,7 +72,14 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
       if (res.ok) {
         setSent(true);
         try { (window as any).gtag?.('event', 'feedback_sent', { app: 'tether' }); } catch { /* GA optional */ }
-        window.setTimeout(() => close(), 2400);
+        // Screening happens after sending, never before: the note reaches the inbox either
+        // way, and nobody's words get held up while we decide how to answer them.
+        const screen = await screenConfide(body, language);
+        if (screen.screened && screen.crisis) {
+          setReachedOut(true);          // stay open, offer help, don't auto-close
+        } else {
+          window.setTimeout(() => close(), 2400);
+        }
       } else {
         let data: any = {};
         try { data = await res.json(); } catch { /* non-JSON error */ }
@@ -117,7 +134,26 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
               <X size={16} />
             </button>
 
-            {sent ? (
+            {sent && reachedOut ? (
+              /* ---- they didn't write feedback; they said something heavy ---- */
+              <div className="py-6 space-y-4">
+                <LifeBuoy size={22} style={{ color: 'var(--rose)' }} />
+                <p className="text-[15px] leading-relaxed">{zh ? '你写的这些，我看到了。' : 'I read what you wrote.'}</p>
+                <p className="text-[12.5px] opacity-70 leading-relaxed">
+                  {zh
+                    ? '这条会送到我这里，但我可能过几天才看到 —— 而你现在就在难受。所以别只等我:下面是此刻就能找到的人。'
+                    : "This reaches me, but I might not see it for days — and you're hurting now. So don't wait on me: below are people you can reach today."}
+                </p>
+                <button onClick={onNeedHelp}
+                  className="w-full rounded-full py-3 text-[11px] tracking-[0.25em] uppercase flex items-center justify-center gap-2"
+                  style={{ background: 'var(--rose)', color: 'var(--bg-base)' }}>
+                  <LifeBuoy size={13} /> {zh ? '看看能帮上忙的人' : 'See who can help'}
+                </button>
+                <button onClick={close} className="w-full text-[11px] opacity-45 hover:opacity-80 py-1">
+                  {zh ? '我知道了' : 'Okay'}
+                </button>
+              </div>
+            ) : sent ? (
               /* ---- thanks state ---- */
               <div className="py-10 text-center space-y-3">
                 <div className="text-[26px]">💛</div>
@@ -170,6 +206,14 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language }) => {
                 </button>
 
                 <p className="mt-3 text-center text-[10.5px] opacity-45">{zh ? '匿名也可以' : 'Anonymous is fine'}</p>
+
+                {/* This box reaches one person, eventually. Say so before someone trusts it
+                    with something that can't wait. */}
+                <button type="button" onClick={onNeedHelp}
+                  className="mt-3 w-full text-[10.5px] opacity-40 hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+                  <LifeBuoy size={11} />
+                  {zh ? '如果现在很难受，这里有能马上帮上忙的人' : "If you're struggling right now, there are people who can help today"}
+                </button>
 
                 {error && <p className="mt-2 text-center text-[11.5px]" style={{ color: 'var(--rose)' }}>{error}</p>}
               </form>
