@@ -259,8 +259,8 @@ export const worryReply = async (text: string, language: Language): Promise<stri
 export const screenConfide = async (
   text: string,
   language: Language,
-): Promise<{ allowed: boolean; crisis: boolean; reason?: string; screened: boolean }> => {
-  if (!apiKey) return { allowed: true, crisis: false, screened: true };
+): Promise<{ allowed: boolean; crisis: boolean; heavy: boolean; reason?: string; screened: boolean }> => {
+  if (!apiKey) return { allowed: true, crisis: false, heavy: false, screened: true };
 
   const prompt = `
     You are screening a private message a teenager is about to send to another teenager on a
@@ -284,11 +284,18 @@ export const screenConfide = async (
     General hopelessness or "I feel awful" alone is NOT a crisis. Note that "crisis" is
     independent of "allowed": a crisis message is usually still allowed.
 
+    Set "heavy": true when the person is writing about their own pain rather than about a
+    thing — sadness, loneliness, worthlessness, self-blame, exhaustion, hopelessness, "I'm
+    not good enough", "nobody likes me". This sits far below "crisis" and is meant to catch
+    the ordinary kind of hurting that a crisis check would, correctly, let pass. A note that
+    is about the app (a bug, a request, praise) is NOT heavy, even if the tone is unhappy.
+    Every crisis message is also heavy.
+
     Reply in ${language} for "reason", and only when blocking.
 
     Message: "${text}"
 
-    Return JSON: { "allowed": boolean, "crisis": boolean, "reason": string|null }
+    Return JSON: { "allowed": boolean, "crisis": boolean, "heavy": boolean, "reason": string|null }
   `;
 
   try {
@@ -302,17 +309,24 @@ export const screenConfide = async (
           properties: {
             allowed: { type: Type.BOOLEAN },
             crisis: { type: Type.BOOLEAN },
+            heavy: { type: Type.BOOLEAN },
             reason: { type: Type.STRING },
           },
-          required: ['allowed', 'crisis'],
+          required: ['allowed', 'crisis', 'heavy'],
         },
       },
     });
     const r = JSON.parse(response.text || '{}');
-    return { allowed: r.allowed !== false, crisis: r.crisis === true, reason: r.reason || undefined, screened: true };
+    return {
+      allowed: r.allowed !== false,
+      crisis: r.crisis === true,
+      heavy: r.heavy === true || r.crisis === true,
+      reason: r.reason || undefined,
+      screened: true,
+    };
   } catch {
     // Couldn't check. Say so plainly and let them retry — inventing a verdict either way
     // would be worse than admitting the check is down.
-    return { allowed: false, crisis: false, screened: false };
+    return { allowed: false, crisis: false, heavy: false, screened: false };
   }
 };

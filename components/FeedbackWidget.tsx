@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, LifeBuoy } from 'lucide-react';
+import { MessageCircle, X, Send, LifeBuoy, Heart } from 'lucide-react';
 import { Language } from '../types';
 import { screenConfide } from '../services/geminiService';
 
@@ -20,6 +20,14 @@ import { screenConfide } from '../services/geminiService';
  * here. That note reaches a private inbox that may not be read for days, so anything
  * suggesting real distress must not be answered with "thanks for the feedback" and
  * nothing else. It still gets sent; the difference is that help is offered straight away.
+ *
+ * There are two ways of hurting here, and only the far one used to be caught. Someone
+ * wrote "I'm so useless" and got a thank-you and a panel that shut itself 2.4 seconds
+ * later, because a crisis check is built to ignore exactly that — and should, or it would
+ * push hotlines at every bad day. So the screen has a middle tier: heavy but not in
+ * danger. That one is not answered with hotlines either. It is answered by saying the
+ * note was read, leaving the panel open, and opening the door to the wall, where the
+ * other people are. Hotlines stay one quiet line away for whoever needs them.
  */
 
 const ENDPOINT = 'https://elenaprojects.cc/api/feedback';
@@ -27,9 +35,10 @@ const ENDPOINT = 'https://elenaprojects.cc/api/feedback';
 interface FeedbackWidgetProps {
   language: Language;
   onNeedHelp: () => void;      // opens the real-help screen
+  onOpenWall?: () => void;     // opens the wall of kind words
 }
 
-const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp }) => {
+const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, onOpenWall }) => {
   const zh = language === 'zh';
 
   const [open, setOpen] = useState(false);
@@ -38,6 +47,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp })
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [reachedOut, setReachedOut] = useState(false);   // the note read as real distress
+  const [heavy, setHeavy] = useState(false);             // hurting, but not in danger
   const [error, setError] = useState('');
   const areaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,7 +63,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp })
   const close = () => {
     setOpen(false);
     // Reset a little later so the closing transition doesn't flash the empty form.
-    window.setTimeout(() => { if (sent) { setSent(false); setReachedOut(false); setText(''); setName(''); } setError(''); }, 300);
+    window.setTimeout(() => { if (sent) { setSent(false); setReachedOut(false); setHeavy(false); setText(''); setName(''); } setError(''); }, 300);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -77,6 +87,8 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp })
         const screen = await screenConfide(body, language);
         if (screen.screened && screen.crisis) {
           setReachedOut(true);          // stay open, offer help, don't auto-close
+        } else if (screen.screened && screen.heavy) {
+          setHeavy(true);               // stay open too — a panel that shuts is a door closing
         } else {
           window.setTimeout(() => close(), 2400);
         }
@@ -151,6 +163,33 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp })
                 </button>
                 <button onClick={close} className="w-full text-[11px] opacity-45 hover:opacity-80 py-1">
                   {zh ? '我知道了' : 'Okay'}
+                </button>
+              </div>
+            ) : sent && heavy ? (
+              /* ---- hurting, but not in danger: the app itself answers ---- */
+              <div className="py-6 space-y-4">
+                <Heart size={22} style={{ color: 'var(--rose)' }} />
+                <p className="text-[15px] leading-relaxed">
+                  {zh ? '我看到了 —— 你写的不是建议，是你正在难受的事。' : "I read it — that wasn't feedback, that was you having a hard time."}
+                </p>
+                <p className="text-[12.5px] opacity-70 leading-relaxed">
+                  {zh
+                    ? '这条留给我了，但我可能过几天才看到。所以先别自己待着 —— 墙上是别人写下的话，有些就是写给今天的你的。'
+                    : "It's saved for me, but I might not see it for days. So don't sit with it alone — the wall is full of things other people wrote, and some of them are for exactly this."}
+                </p>
+                {onOpenWall && (
+                  <button onClick={() => { close(); onOpenWall(); }}
+                    className="w-full rounded-full py-3 text-[11px] tracking-[0.25em] uppercase flex items-center justify-center gap-2"
+                    style={{ background: 'var(--rose)', color: 'var(--bg-base)' }}>
+                    <Heart size={13} /> {zh ? '去看看大家写的话' : 'Read what others wrote'}
+                  </button>
+                )}
+                <button onClick={close} className="w-full text-[11px] opacity-45 hover:opacity-80 py-1">
+                  {zh ? '我还好，关掉吧' : "I'm okay — close this"}
+                </button>
+                <button onClick={onNeedHelp}
+                  className="w-full text-[11px] opacity-35 hover:opacity-70 py-1 underline underline-offset-4">
+                  {zh ? '如果现在真的撑不住，这里有能帮上忙的人' : 'If it’s worse than that, here are people who can help'}
                 </button>
               </div>
             ) : sent ? (
