@@ -19,7 +19,7 @@ import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
 import ConfideCompose from './components/ConfideCompose';
 import TalksPanel from './components/TalksPanel';
-import { listenToTalks, myTalks, Talk } from './services/talks';
+import { listenToTalks, myTalks, Talk, TALKS_ENABLED } from './services/talks';
 import FeedbackWidget from './components/FeedbackWidget';
 import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy, MessageCircle } from 'lucide-react';
 
@@ -262,7 +262,8 @@ export default function App() {
     if (!currentUser) return;
     
     // Requests and replies in the bounded one-to-one channel.
-    const unsubTalks = listenToTalks(currentUser.uid, setTalks);
+    // Paused — see TALKS_ENABLED. This poll is what was downloading everyone's messages.
+    const unsubTalks = TALKS_ENABLED ? listenToTalks(currentUser.uid, setTalks) : () => {};
 
     // Listen for messages targeted specifically to this user (targetId == currentUser.uid)
     const unsubInbox = listenToInbox(currentUser.uid, (msgs) => {
@@ -613,7 +614,7 @@ export default function App() {
           language={language}
           onClose={() => setShowWall(false)}
           myUid={currentUser?.uid}
-          onConfide={currentUser ? (msg) => { setShowWall(false); setConfideTo(msg); } : undefined}
+          onConfide={TALKS_ENABLED && currentUser ? (msg) => { setShowWall(false); setConfideTo(msg); } : undefined}
         />
       )}
 
@@ -687,6 +688,7 @@ export default function App() {
                     <Sparkles size={18} />
                  </button>
 
+                 {TALKS_ENABLED && (
                  <button onClick={() => setShowTalks(true)} className="relative opacity-70 hover:opacity-100 transition-opacity" title={zh ? '说说话' : 'Talking'}>
                     <MessageCircle size={18} />
                     {pendingTalks > 0 && (
@@ -694,6 +696,7 @@ export default function App() {
                             style={{ background: 'var(--rose)', color: 'var(--bg-base)' }}>{pendingTalks}</span>
                     )}
                  </button>
+                 )}
 
                  <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-70 hover:opacity-100' : 'opacity-40 hover:opacity-70'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-pressed={soundOn}>
                     {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
@@ -881,7 +884,7 @@ export default function App() {
                       <div className="flex justify-between items-center mt-2 text-[10px] opacity-60">
                         <span className="tracking-widest">{named ? `— ${msg.senderName}` : ''}</span>
                         <div className="flex items-center gap-3">
-                          {canReach && (
+                          {TALKS_ENABLED && canReach && (
                             <button
                               onClick={() => setConfideTo(msg)}
                               title={zh ? '想跟 TA 说说' : 'reach out to them'}

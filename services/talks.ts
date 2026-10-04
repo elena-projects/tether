@@ -18,6 +18,21 @@
 // by anyone who simply knows the database URL.
 const BASE = '/talks';
 
+/**
+ * OFF since 2026-10-04 — do not turn back on until reading is restricted per person.
+ *
+ * `allTalks` downloads the whole box and filters in the browser, so every visitor received
+ * every private message, including the first message of each request — which the design
+ * says even the recipient must not see until they agree. Nothing on the server could stop
+ * it: a user's id is a random string shown publicly on the wall, so any request can claim
+ * to be anyone. The fix is to read with the Firebase anonymous-auth token and have the
+ * database rules allow a talk only to its two participants.
+ *
+ * nginx also refuses /talks/ outright, so a tab left open on the old code cannot keep
+ * fetching. Both need undoing to bring this back.
+ */
+export const TALKS_ENABLED = false;
+
 async function rGet(path = ''): Promise<any> {
   try { const r = await fetch(`${BASE}/${path}.json`); return r.ok ? await r.json() : null; } catch { return null; }
 }
