@@ -74,17 +74,21 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
     setError('');
     setSending(true);
     try {
+      // Screen first so the note can carry a tag into the inbox, where Elena reads product
+      // feedback and someone's pain in separate places. This holds the note for a second or
+      // two, never longer and never for good: if the check can't run, it goes out untagged,
+      // exactly as it would have before tags existed.
+      const screen = await screenConfide(body, language);
+      const flag = !screen.screened ? undefined : screen.crisis ? 'crisis' : screen.heavy ? 'heavy' : undefined;
+
       const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: body, name: name.trim(), tool: 'tether' }),
+        body: JSON.stringify({ text: body, name: name.trim(), tool: 'tether', ...(flag ? { flag } : {}) }),
       });
       if (res.ok) {
         setSent(true);
         try { (window as any).gtag?.('event', 'feedback_sent', { app: 'tether' }); } catch { /* GA optional */ }
-        // Screening happens after sending, never before: the note reaches the inbox either
-        // way, and nobody's words get held up while we decide how to answer them.
-        const screen = await screenConfide(body, language);
         if (screen.screened && screen.crisis) {
           setReachedOut(true);          // stay open, offer help, don't auto-close
         } else if (screen.screened && screen.heavy) {
