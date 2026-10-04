@@ -4,6 +4,10 @@ FROM nginx:1.27-alpine
 # at start-up, injecting ${GEMINI_API_KEY} and ${TALKS_SECRET} (Cloud Run env vars).
 # NGINX_ENVSUBST_FILTER limits substitution to those vars so nginx's own $host/$1 stay intact.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
+# The rate-limit zone lives in the http context, so it is a plain conf.d file rather than
+# part of the server template. The 00- prefix makes nginx read it before default.conf,
+# which refers to the zone.
+COPY ratelimit.conf /etc/nginx/conf.d/00-ratelimit.conf
 ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET|DATA_SECRET)
 COPY dist /usr/share/nginx/html
 EXPOSE 8080
