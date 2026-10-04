@@ -1,0 +1,49 @@
+{
+  "rules": {
+    "users": {
+      "$box": {
+        ".read": true,
+        "$uid": { ".write": true }
+      }
+    },
+    "messages": {
+      ".read": true,
+      "$id": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['text','timestamp']) && newData.child('text').isString() && newData.child('text').val().length <= 300",
+        "voteCount": {
+          ".write": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1 && newData.val() >= (data.exists() ? data.val() : 0) - 1"
+        }
+      }
+    },
+    "history": {
+      "$uid": {
+        ".read": true,
+        "$entry": {
+          ".write": "!data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['state','timestamp'])"
+        }
+      }
+    },
+    "feedback": {
+      "$box": {
+        ".read": true,
+        "$id": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['text','ts']) && newData.child('text').isString() && newData.child('text').val().length <= 600"
+        }
+      }
+    },
+    "talks": {
+      "$box": {
+        ".read": true,
+        "$talk": {
+          ".write": true,
+          ".validate": "newData.hasChildren(['fromId','toId','status','createdAt'])",
+          "wallMsgText": { ".validate": "newData.isString() && newData.val().length <= 300" },
+          "turns": { "$i": { "text": { ".validate": "newData.isString() && newData.val().length <= 400" } } }
+        }
+      }
+    }
+  }
+}
