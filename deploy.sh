@@ -10,6 +10,12 @@ cd "$(dirname "$0")"
 
 export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3   # gcloud crashes on the system Python 3.9
 
+account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+if [ "$account" != "elena@geminiat.work" ]; then
+  echo "Expected active gcloud account elena@geminiat.work, found: $account" >&2
+  exit 1
+fi
+
 npm run build
 
 # The bundle must never carry the key — nginx injects it server-side at runtime.
@@ -20,7 +26,12 @@ fi
 
 gcloud run deploy tether \
   --source . \
+  --project=m-gemini-1127 \
   --region=us-west1 \
   --platform=managed \
   --allow-unauthenticated \
+  --service-account=tether-runtime@m-gemini-1127.iam.gserviceaccount.com \
+  --remove-env-vars=DATA_SECRET \
+  --clear-volumes \
+  --clear-volume-mounts \
   --port=8080

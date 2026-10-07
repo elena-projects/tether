@@ -89,9 +89,11 @@ Mood coordinates are synced through the same-origin `/api/state` route:
    valence/arousal range.
 4. The handler writes to `users/<DATA_SECRET>/<uid>` as the dedicated Firebase Auth user.
 
-The browser never receives `DATA_SECRET` and cannot write to Firebase directly. Display
-names and journal history stay local to the device. Do not re-enable remote history
-without a separate authenticated, user-scoped design.
+The same endpoint performs matching inside the server and returns at most one active,
+anonymous candidate. The browser cannot list the users collection, never receives
+`DATA_SECRET`, and cannot read or write mood records directly. Display names and journal
+history stay local to the device. Do not re-enable remote history without a separate
+authenticated, user-scoped design.
 
 The Portfolio deployment also requires `DATA_SECRET` and a high-entropy
 `STATE_SESSION_SECRET`. The integrated source copy is
@@ -120,6 +122,11 @@ Firebase Realtime Database uses secret-scoped server paths for private data:
 
 Cloud Run nginx rate limiting is keyed on the last IP in `X-Forwarded-For`, which is
 appended by Google Front End. Keep the Gemini, wall, and state limits in separate zones.
+
+The Cloud Run service runs as
+`tether-runtime@m-gemini-1127.iam.gserviceaccount.com`, which intentionally has no
+project IAM roles. Do not switch it back to the default Compute service account. The
+old AI Studio GCS volume is obsolete and must remain removed.
 
 The Gemini API key is shared by Feynman AI, CogniCard, and Tether. Do not delete or
 rotate it without updating all three Cloud Run services.

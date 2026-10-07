@@ -73,16 +73,22 @@ export const updateUserState = async (userId: string, _username: string, state: 
 
 // --- Social Discovery (Finding Drifters) ---
 export const getDriftingUsers = async (currentUserId: string): Promise<UserProfile[]> => {
-  const users = await rGet('users');
-  if (!users) return [];
-  const drifters: UserProfile[] = [];
-  for (const [uid, data] of Object.entries<any>(users)) {
-    const isActive = (Date.now() - (data.lastActive || 0)) < 10 * 60 * 1000;
-    if (uid !== currentUserId && data.state && data.state.valence < 40 && isActive) {
-      drifters.push({ uid, username: '', state: data.state, lastActive: data.lastActive });
-    }
+  const token = localStorage.getItem(STATE_TOKEN_KEY);
+  if (!token) return [];
+  try {
+    const response = await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'match', uid: currentUserId, token }),
+    });
+    if (!response.ok) return [];
+    const result = await response.json();
+    const user = result.user;
+    if (!user || !/^user_[a-f0-9]{20}$/.test(user.uid)) return [];
+    return [{ uid: user.uid, username: '', state: user.state, lastActive: user.lastActive }];
+  } catch {
+    return [];
   }
-  return drifters;
 };
 
 // --- Global Messaging & Voting ---

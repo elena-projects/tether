@@ -2,7 +2,8 @@
   "rules": {
     "users": {
       "$box": {
-        ".read": true,
+        ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
+        ".indexOn": ["lastActive"],
         "$uid": {
           ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && $uid.matches(/^user_[a-f0-9]{20}$/) && newData.exists()",
           ".validate": "newData.hasChildren(['state','lastActive']) && newData.child('lastActive').isNumber() && newData.child('state').hasChildren(['valence','arousal']) && newData.child('state').child('valence').isNumber() && newData.child('state').child('valence').val() >= 0 && newData.child('state').child('valence').val() <= 100 && newData.child('state').child('arousal').isNumber() && newData.child('state').child('arousal').val() >= 0 && newData.child('state').child('arousal').val() <= 100"

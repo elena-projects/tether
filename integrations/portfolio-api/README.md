@@ -18,7 +18,9 @@ The deployed Portfolio project must place `wall.js` at `api/wall.js` and configu
 Firebase Realtime Database rules must restrict new message creation and mood-state
 writes to the dedicated writer's UID. Do not use a Firebase Admin key or legacy
 database secret here. The state endpoint stores only anonymous mood coordinates and
-activity time; display names and journal history remain local to the browser.
+activity time. It also performs server-side matching and returns no more than one
+anonymous candidate, so clients never download the users collection. Display names and
+journal history remain local to the browser.
 
 Deploy both endpoints before deploying the Tether client or its Firebase rules. A GET
 request should return `405 post_only`; a Vercel `404 NOT_FOUND` means the handler is

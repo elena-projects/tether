@@ -22,8 +22,9 @@ React 19 · Vite · Tailwind CSS (build-time) · Google **Gemini** (strict conte
 
 Public wall posts are moderated by `https://elenaprojects.cc/api/wall` before the
 server writes them to Firebase. The browser cannot create Firebase messages directly.
-Mood-state sync uses short-lived, server-signed anonymous sessions through
-`https://elenaprojects.cc/api/state`; journal history remains local to the device.
+Mood-state sync uses server-signed anonymous sessions through
+`https://elenaprojects.cc/api/state`. Matching is performed server-side and returns at
+most one anonymous candidate; journal history remains local to the device.
 
 ## Run locally
 ```bash
@@ -45,9 +46,10 @@ Deploy `integrations/portfolio-api/wall.js` and `state.js` as the Portfolio proj
 ./deploy.sh
 ```
 
-The Tether Cloud Run service must already contain `GEMINI_API_KEY`, `DATA_SECRET`,
-`TALKS_SECRET`, and `WALL_PROXY_SECRET`. `deploy.sh` preserves existing environment
-variables and never places them in the browser bundle.
+The Tether Cloud Run service must already contain `GEMINI_API_KEY`, `TALKS_SECRET`,
+and `WALL_PROXY_SECRET`. It runs as the no-role `tether-runtime` service account.
+`deploy.sh` preserves existing environment variables and never places them in the
+browser bundle.
 
 The Portfolio deployment must contain `WALL_PROXY_SECRET`, `GEMINI_API_KEY`,
 `FIREBASE_API_KEY`, `WALL_FIREBASE_EMAIL`, `WALL_FIREBASE_PASSWORD`, `DATA_SECRET`,

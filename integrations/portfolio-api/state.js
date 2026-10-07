@@ -65,8 +65,50 @@ export default async function handler(req, res) {
     return res.status(200).json({ uid: nextUid, token: signedToken(nextUid) });
   }
 
-  if (body.action !== 'state') return res.status(400).json({ error: 'action' });
   if (!validSession(uid, token)) return res.status(403).json({ error: 'session' });
+
+  if (body.action === 'match') {
+    let idToken;
+    try { idToken = await firebaseIdToken(); }
+    catch { return res.status(502).json({ error: 'store_auth' }); }
+
+    const activeAfter = Date.now() - 10 * 60 * 1000;
+    const query = new URLSearchParams({
+      orderBy: JSON.stringify('lastActive'),
+      startAt: String(activeAfter),
+      auth: idToken,
+    });
+    const path = `/users/${encodeURIComponent(process.env.DATA_SECRET)}.json?${query}`;
+    const response = await fetch(`${RTDB}${path}`);
+    if (!response.ok) return res.status(502).json({ error: 'store' });
+
+    const users = await response.json() || {};
+    const matches = Object.entries(users).filter(([candidateUid, candidate]) => {
+      const state = candidate?.state;
+      return UID_PATTERN.test(candidateUid) &&
+        candidateUid !== uid &&
+        Number.isFinite(state?.valence) &&
+        Number.isFinite(state?.arousal) &&
+        state.valence < 40 &&
+        candidate.lastActive >= activeAfter;
+    });
+    if (matches.length === 0) return res.status(200).json({ user: null });
+
+    const index = randomBytes(4).readUInt32BE(0) % matches.length;
+    const [candidateUid, candidate] = matches[index];
+    return res.status(200).json({
+      user: {
+        uid: candidateUid,
+        state: {
+          valence: Math.round(candidate.state.valence),
+          arousal: Math.round(candidate.state.arousal),
+        },
+        lastActive: candidate.lastActive,
+      },
+    });
+  }
+
+  if (body.action !== 'state') return res.status(400).json({ error: 'action' });
 
   const valence = Number(body.state?.valence);
   const arousal = Number(body.state?.arousal);
