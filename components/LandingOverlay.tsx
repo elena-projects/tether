@@ -43,6 +43,12 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
            .animate-float-gentle {
              animation: floatGentle 6s ease-in-out infinite;
            }
+           @media (min-width: 768px) and (min-height: 850px) {
+             .landing-layout {
+               justify-content: center;
+               min-height: calc(100dvh - 6rem);
+             }
+           }
          `}
        </style>
        {/* Language switcher (top-right) — simple 中文 / English toggle */}
@@ -71,8 +77,8 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
        <div className="absolute top-[34%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[680px] h-[680px] bg-[#d4967a] opacity-[0.28] rounded-full blur-[160px] pointer-events-none"></div>
        <div className="absolute top-[64%] left-[36%] -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-[#c97f5e] opacity-[0.15] rounded-full blur-[150px] pointer-events-none"></div>
 
-       <div className="relative z-10 w-full max-w-6xl px-6 md:px-12 flex flex-col items-center">
-         
+       <div className="landing-layout relative z-10 w-full max-w-7xl px-6 md:px-12 flex flex-col items-center">
+         <div className="w-full flex flex-col items-center">
          <div className="flex flex-col items-center space-y-5 md:space-y-6 animate-float-gentle max-w-2xl text-center">
             <Fingerprint className="w-10 h-10 md:w-12 md:h-12 mx-auto text-white opacity-80" />
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold tracking-[0.4em] text-white">TETHER</h1>
@@ -127,9 +133,10 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
               <span className="text-[10px] md:text-xs font-sans uppercase tracking-[0.16em] text-slate-300 select-none">{zh ? '在这台设备上记住我' : 'Remember me on this device'}</span>
             </label>
          </form>
+         </div>
 
          {/* Product path — visible as the next section, after the primary action. */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-14 w-full max-w-4xl mx-auto mt-11 md:mt-10 pt-8 md:pt-8 border-t border-white/10">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-16 w-full max-w-5xl mx-auto mt-11 md:mt-12 pt-8 md:pt-9 border-t border-white/10">
             {/* Step 1 */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-5 group transition-all duration-500 hover:-translate-y-2">
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">
