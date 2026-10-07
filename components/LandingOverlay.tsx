@@ -33,7 +33,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
   };
 
   return (
-    <div style={{ ['--tint' as any]: '237 228 218' }} className={`fixed inset-0 z-50 bg-[#3a322c] flex flex-col items-center justify-start pt-16 sm:pt-20 md:pt-[10vh] pb-12 transition-all duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div style={{ ['--tint' as any]: '237 228 218' }} className={`fixed inset-0 z-50 bg-[#3a322c] flex flex-col items-center justify-start pt-12 sm:pt-14 md:pt-10 lg:pt-12 pb-12 transition-all duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
        <style>
          {`
            @keyframes floatGentle {
@@ -73,7 +73,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
 
        <div className="relative z-10 w-full max-w-6xl px-6 md:px-12 flex flex-col items-center">
          
-         <div className="flex flex-col items-center space-y-6 md:space-y-8 animate-float-gentle max-w-2xl text-center">
+         <div className="flex flex-col items-center space-y-5 md:space-y-6 animate-float-gentle max-w-2xl text-center">
             <Fingerprint className="w-10 h-10 md:w-12 md:h-12 mx-auto text-white opacity-80" />
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold tracking-[0.4em] text-white">TETHER</h1>
             <p className="text-sm md:text-base text-slate-300/80 font-serif italic leading-relaxed max-w-xl mx-auto">
@@ -81,7 +81,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
             </p>
          </div>
 
-         <form onSubmit={handleSubmit} className="mt-10 md:mt-12 flex flex-col items-center gap-5 w-full max-w-sm animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
+         <form onSubmit={handleSubmit} className="mt-8 md:mt-9 flex flex-col items-center gap-4 w-full max-w-sm animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
             <div className="w-full">
               <label htmlFor="display-name" className="block text-center text-[11px] font-bold tracking-[0.2em] text-white/80 uppercase mb-3">
                 {zh ? '显示名称' : 'Display name'}
@@ -129,7 +129,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
          </form>
 
          {/* Product path — visible as the next section, after the primary action. */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-14 w-full max-w-4xl mx-auto mt-14 md:mt-16 pt-10 md:pt-12 border-t border-white/10">
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-14 w-full max-w-4xl mx-auto mt-11 md:mt-10 pt-8 md:pt-8 border-t border-white/10">
             {/* Step 1 */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-5 group transition-all duration-500 hover:-translate-y-2">
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">

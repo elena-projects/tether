@@ -735,17 +735,17 @@ export default function App() {
         )}
 
         {/* Main Content — a gentle 3-step ritual (check-in → respond → breathe) */}
-        <main className={`flex-1 w-full max-w-2xl px-5 md:px-8 flex flex-col items-center justify-start gap-8 mt-2 z-10 pb-20 transition-opacity duration-1000 ${showLanding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <main className={`flex-1 w-full max-w-4xl px-5 md:px-8 flex flex-col items-center justify-start gap-8 mt-2 z-10 pb-20 transition-opacity duration-1000 ${showLanding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-sm md:max-w-lg mx-auto flex flex-col items-center gap-4 animate-in fade-in duration-700">
+          <div className="w-full max-w-sm md:max-w-3xl mx-auto flex flex-col items-center gap-5 animate-in fade-in duration-700">
             <p className="text-center text-lg md:text-2xl font-serif italic opacity-90 max-w-md leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="w-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-              <div className="relative flex justify-center w-44 md:w-48 -my-4 md:my-0 shrink-0">
+            <div className="w-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 lg:gap-14">
+              <div className="relative flex justify-center w-44 md:w-56 -my-4 md:my-0 shrink-0">
                  <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
                  {isHealing && soundOn && (
                    <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
@@ -755,7 +755,7 @@ export default function App() {
                  )}
               </div>
 
-              <div className="w-full max-w-[300px] md:max-w-[340px]">
+              <div className="w-full max-w-[300px] md:max-w-[360px] shrink-0">
                 <Controls
                   state={state}
                   onChange={setState}
