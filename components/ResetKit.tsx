@@ -41,9 +41,9 @@ const ResetKit: React.FC<Props> = ({ language, onClose, onUsed, version = 0 }) =
   const enter = (t: Tool) => { setTool(t); onUsed?.(t); };
 
   return (
-    <div className="fixed inset-0 z-[68] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="modal-overlay viewport-overlay fixed inset-0 z-[68] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }}
-           className="w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-3xl shadow-2xl text-white flex flex-col">
+           className="modal-panel w-full max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-3xl shadow-2xl text-white flex flex-col">
         {/* header */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10 shrink-0">
           {tool !== 'menu' && (

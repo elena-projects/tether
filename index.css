@@ -93,3 +93,154 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgb(var(--tint) / 0.12);
 }
+
+/* Layout follows available space, including browser chrome and display cutouts.
+   Repeated component classes outrank Tailwind's responsive utility selectors. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html { scroll-padding-block: 1rem; }
+button { overflow-wrap: anywhere; }
+button > svg { flex-shrink: 0; }
+input, textarea { scroll-margin-block: 1.5rem; }
+.app-shell.app-shell { min-height: 100dvh; }
+.app-header.app-header {
+  max-width: 90rem;
+  padding-top: calc(1rem + var(--safe-top));
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+}
+.app-header.app-header > *, .modal-panel.modal-panel *, .welcome-content.welcome-content > * { min-width: 0; }
+.app-header.app-header button { min-width: 44px; min-height: 44px; justify-content: center; }
+.app-header.app-header button:not(:has(span)) { display: inline-flex; align-items: center; }
+.app-main.app-main {
+  padding-left: max(1.25rem, var(--safe-left));
+  padding-right: max(1.25rem, var(--safe-right));
+  padding-bottom: calc(5rem + var(--safe-bottom));
+}
+.viewport-overlay.viewport-overlay {
+  top: var(--visible-top, 0px);
+  bottom: auto;
+  height: var(--visible-height, 100dvh);
+  overscroll-behavior: contain;
+}
+.landing-screen.landing-screen {
+  padding-top: calc(4.5rem + var(--safe-top));
+  padding-bottom: calc(2rem + var(--safe-bottom));
+  overflow-x: clip;
+}
+.landing-layout.landing-layout { flex-shrink: 0; margin-block: auto; }
+.landing-layout.landing-layout > :first-child { flex-shrink: 0; }
+.landing-language.landing-language {
+  top: calc(.75rem + var(--safe-top));
+  right: max(1rem, var(--safe-right));
+}
+.landing-language.landing-language button { min-height: 36px; min-width: 44px; }
+.landing-layout.landing-layout, .welcome-screen.welcome-screen {
+  padding-left: max(1.5rem, var(--safe-left));
+  padding-right: max(1.5rem, var(--safe-right));
+}
+.welcome-content.welcome-content {
+  overflow-wrap: anywhere;
+  padding-top: calc(2rem + var(--safe-top));
+  padding-bottom: calc(2rem + var(--safe-bottom));
+}
+.modal-overlay.modal-overlay {
+  padding: max(1rem, var(--safe-top)) max(1rem, var(--safe-right)) max(1rem, var(--safe-bottom)) max(1rem, var(--safe-left));
+}
+.modal-panel.modal-panel {
+  max-height: 100%;
+  min-height: 0;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+}
+.modal-panel.modal-panel > .overflow-y-auto { min-height: 0; }
+.modal-panel.modal-panel > .border-b { flex-shrink: 0; }
+.modal-panel.modal-panel button:has(> svg:only-child) { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.history-panel.history-panel {
+  top: var(--visible-top, 0px);
+  height: var(--visible-height, 100dvh);
+  width: min(24rem, 100%);
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.history-panel.history-panel > * { flex-shrink: 0; }
+.history-panel.history-panel > .overflow-y-auto { flex-shrink: 1; min-height: 0; }
+.history-panel.history-panel button { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+#root:has(.history-panel:not([inert])) .feedback-launcher { visibility: hidden; }
+.feedback-launcher.feedback-launcher {
+  bottom: calc(1rem + var(--safe-bottom));
+  right: max(1rem, var(--safe-right));
+  min-height: 44px;
+}
+
+/* Tablets keep a dedicated tool row until the full navigation fits. */
+@media (max-width: 1099px) {
+  #root input:not([type=range]):not([type=checkbox]), #root textarea, #root select { font-size: 16px; }
+  .app-header.app-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .5rem; padding-bottom: .5rem; }
+  .app-header.app-header > :nth-child(2) { order: 3; grid-column: 1 / -1; margin-left: 0; gap: .5rem; }
+  .app-header.app-header > :nth-child(3) { order: 2; gap: .5rem; }
+  .app-header.app-header > :nth-child(3) button span,
+  .app-header.app-header > :nth-child(3) div span { display: none; }
+}
+@media (max-width: 639px) {
+  .app-header.app-header h1 { font-size: 1rem; letter-spacing: 0; }
+  .app-header.app-header > :first-child { gap: .5rem; }
+  .app-header.app-header > :nth-child(2) { gap: 0; justify-content: space-evenly; }
+  .app-header.app-header > :nth-child(2) button span { display: none; }
+  .checkin-controls.checkin-controls { max-width: 340px; }
+  .checkin-controls.checkin-controls > div { max-width: 100%; }
+  .landing-layout.landing-layout h1 { font-size: 2.25rem; letter-spacing: 0; }
+  .landing-path.landing-path { gap: 1.75rem; margin-top: 2rem; padding-top: 1.5rem; }
+  .landing-path.landing-path > div { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: .5rem 1rem; text-align: left; align-items: start; }
+  .landing-path.landing-path > div > * { margin: 0; }
+  .landing-path.landing-path > div > div { grid-row: span 2; width: 44px; height: 44px; }
+  .landing-path.landing-path p { font-size: .875rem; }
+  .welcome-content.welcome-content h1 { font-size: 2rem; }
+  .modal-panel.modal-panel { border-radius: 8px; }
+}
+@media (max-width: 359px) {
+  .app-header.app-header { padding-inline: max(.75rem, var(--safe-left)) max(.75rem, var(--safe-right)); }
+  .app-header.app-header > :first-child > svg { width: 28px; height: 28px; }
+  .app-header.app-header > :nth-child(3) div { letter-spacing: 0; padding-inline: .25rem; }
+  .app-main.app-main { padding-inline: max(1rem, var(--safe-left)) max(1rem, var(--safe-right)); }
+}
+@media (min-width: 640px) {
+  .checkin-layout.checkin-layout { max-width: 48rem; }
+  .checkin-instruments.checkin-instruments { flex-direction: row; gap: 2rem; }
+  .checkin-orb.checkin-orb { width: 14rem; margin-block: 0; }
+  .checkin-controls.checkin-controls { width: min(50%, 360px); flex-shrink: 1; }
+  .landing-path.landing-path { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
+}
+@media (min-width: 1100px) and (min-height: 800px) {
+  .app-main.app-main { padding-top: min(6vh, 5rem); }
+  .checkin-instruments.checkin-instruments { gap: 4rem; }
+  .checkin-orb.checkin-orb { width: 18rem; }
+}
+/* Short phones and landscape windows keep content scrollable, never clipped. */
+@media (max-height: 700px) {
+  .checkin-layout.checkin-layout { gap: .75rem; }
+  .checkin-orb.checkin-orb { width: 8rem; margin-block: -.75rem; }
+  .welcome-content.welcome-content { gap: 1.25rem; }
+  .landing-layout.landing-layout form { margin-top: 1.5rem; }
+  .landing-layout.landing-layout > :first-child > :first-child { gap: .75rem; }
+  .landing-layout.landing-layout > :first-child > :first-child > * { margin-top: 0; }
+}
+@media (min-width: 568px) and (max-height: 500px) {
+  .app-header.app-header { padding-top: max(.5rem, var(--safe-top)); }
+  .checkin-instruments.checkin-instruments { flex-direction: row; gap: 1.5rem; }
+  .checkin-layout.checkin-layout { max-width: 42rem; }
+  .checkin-orb.checkin-orb { width: 9rem; margin: 0; }
+  .checkin-controls.checkin-controls { width: 300px; flex-shrink: 1; }
+  .checkin-controls.checkin-controls > div > :first-child > .flex.items-center > span { width: 2.75rem; font-size: .625rem; }
+  .landing-screen.landing-screen { padding-top: calc(3.5rem + var(--safe-top)); }
+  .landing-layout.landing-layout h1 { font-size: 2rem; letter-spacing: 0; }
+  .landing-layout.landing-layout > :first-child > :first-child > svg { width: 28px; height: 28px; }
+}

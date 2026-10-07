@@ -46,11 +46,11 @@ const SafetyNet: React.FC<Props> = ({ language, onClose }) => {
   const Ico = ({ t }: { t: string }) => t === 'text' ? <MessageSquare size={15} /> : t === 'globe' ? <Globe size={15} /> : <Phone size={15} />;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+    <div className="modal-overlay viewport-overlay fixed inset-0 z-[70] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{ background: 'var(--bg-base)' }}
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl text-white p-7 relative"
+        className="modal-panel w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl text-white p-7 relative"
       >
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"><X size={18} /></button>
 

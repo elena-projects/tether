@@ -118,7 +118,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
         <button
           onClick={() => setOpen(true)}
           aria-label={zh ? '打开反馈窗' : 'Open feedback'}
-          className="fixed bottom-5 right-5 z-[60] font-mono flex items-center gap-2 px-4 py-2.5 rounded-full
+          className="feedback-launcher fixed bottom-5 right-5 z-[60] font-mono flex items-center gap-2 px-4 py-2.5 rounded-full
                      border border-white/20 text-white opacity-45 hover:opacity-100 hover:border-white/40
                      text-[10px] tracking-[0.25em] uppercase transition-all duration-300 backdrop-blur-md"
           style={{ background: 'rgb(var(--tint) / 0.06)' }}
@@ -130,7 +130,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
 
       {/* ---------- panel ---------- */}
       {open && (
-        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center sm:justify-end p-3 sm:p-6 font-mono">
+        <div className="modal-overlay viewport-overlay fixed inset-0 z-[90] flex items-end sm:items-center justify-center sm:justify-end p-3 sm:p-6 font-mono">
           <div
             className="absolute inset-0 bg-black/45 backdrop-blur-sm"
             onClick={close}
@@ -139,7 +139,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
           <div
             role="dialog"
             aria-modal="true"
-            className="relative w-full sm:w-[390px] max-h-[88vh] overflow-y-auto rounded-3xl border p-6 sm:p-7 text-white shadow-2xl"
+            className="modal-panel relative w-full sm:w-[390px] max-h-[88vh] overflow-y-auto rounded-3xl border p-6 sm:p-7 text-white shadow-2xl"
             style={{ background: 'var(--card)', borderColor: 'rgb(var(--line))' }}
           >
             <button

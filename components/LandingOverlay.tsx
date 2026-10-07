@@ -33,7 +33,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
   };
 
   return (
-    <div style={{ ['--tint' as any]: '237 228 218' }} className={`fixed inset-0 z-50 bg-[#3a322c] flex flex-col items-center justify-start pt-12 sm:pt-14 md:pt-10 lg:pt-12 pb-12 transition-all duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div style={{ ['--tint' as any]: '237 228 218' }} className={`landing-screen viewport-overlay fixed inset-0 z-50 bg-[#3a322c] flex flex-col items-center justify-start pt-12 sm:pt-14 md:pt-10 lg:pt-12 pb-12 transition-opacity duration-1000 overflow-y-auto ${isExiting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
        <style>
          {`
            @keyframes floatGentle {
@@ -43,16 +43,10 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
            .animate-float-gentle {
              animation: floatGentle 6s ease-in-out infinite;
            }
-           @media (min-width: 768px) and (min-height: 850px) {
-             .landing-layout {
-               justify-content: center;
-               min-height: calc(100dvh - 6rem);
-             }
-           }
          `}
        </style>
        {/* Language switcher (top-right) — simple 中文 / English toggle */}
-       <div className="absolute top-6 right-6 z-20 flex items-center gap-1 bg-white/5 border border-white/10 rounded-full p-0.5 text-[11px] tracking-widest">
+       <div className="landing-language absolute top-6 right-6 z-20 flex items-center gap-1 bg-white/5 border border-white/10 rounded-full p-0.5 text-[11px] tracking-widest">
           <button
             onClick={() => setLanguage('zh')}
             className={`px-3 py-1 rounded-full transition-colors ${language === 'zh' ? 'bg-white/15 text-white font-bold' : 'text-white/50 hover:text-white/80'}`}
@@ -99,7 +93,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
                 onChange={(e) => setUsername(e.target.value)}
                 maxLength={12}
                 autoComplete="nickname"
-                placeholder={zh ? '用任何让你舒服的名字' : 'Any name you feel comfortable with'}
+                placeholder={zh ? '用任何让你舒服的名字' : 'Your name or nickname'}
                 aria-describedby="display-name-help"
                 className="w-full rounded-md border border-white/25 bg-white/[0.06] px-4 py-3.5 text-center font-sans text-base text-white placeholder:text-white/45 focus:outline-none focus:border-[#d99a7d] focus:ring-2 focus:ring-[#d99a7d]/25 transition-colors"
               />
@@ -136,7 +130,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
          </div>
 
          {/* Product path — visible as the next section, after the primary action. */}
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-16 w-full max-w-5xl mx-auto mt-11 md:mt-12 pt-8 md:pt-9 border-t border-white/10">
+         <div className="landing-path grid grid-cols-1 md:grid-cols-3 gap-9 md:gap-16 w-full max-w-5xl mx-auto mt-11 md:mt-12 pt-8 md:pt-9 border-t border-white/10">
             {/* Step 1 */}
             <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-5 group transition-all duration-500 hover:-translate-y-2">
                <div className="w-12 h-12 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-slate-300 group-hover:bg-white/10 group-hover:border-white/30 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]">

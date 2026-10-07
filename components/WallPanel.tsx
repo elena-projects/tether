@@ -24,8 +24,8 @@ const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, loading, langu
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[65] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }} className="w-full max-w-lg max-h-[88vh] overflow-hidden rounded-3xl shadow-2xl text-white flex flex-col">
+    <div className="modal-overlay viewport-overlay fixed inset-0 z-[65] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }} className="modal-panel w-full max-w-lg max-h-[88vh] overflow-hidden rounded-3xl shadow-2xl text-white flex flex-col">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
           <Sparkles size={16} className="text-teal-300" />
           <div>

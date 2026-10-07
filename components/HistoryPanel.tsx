@@ -68,7 +68,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ isOpen, onClose, userId, he
       )}
       
       {/* Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-80 bg-[#111] border-l border-white/10 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div inert={!isOpen} className={`history-panel fixed top-0 right-0 h-full w-80 bg-[#111] border-l border-white/10 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         
         <div className="p-6 border-b border-white/10 flex justify-between items-center">
           <div className="flex items-center gap-2">

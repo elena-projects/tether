@@ -71,12 +71,12 @@ const WelcomeBack: React.FC<Props> = ({ username, language, healingScore, rememb
   return (
     <div
       style={{ background: 'var(--bg-base)' }}
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center px-6 text-white overflow-y-auto animate-in fade-in duration-700"
+      className="welcome-screen viewport-overlay fixed inset-0 z-40 flex flex-col items-center px-6 text-white overflow-y-auto animate-in fade-in duration-700"
     >
       {/* soft pink bloom */}
       <div className="absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] h-[560px] bg-[#e0a6b0] opacity-[0.16] rounded-full blur-[160px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-lg flex flex-col items-center text-center gap-8 py-16">
+      <div className="welcome-content relative z-10 w-full max-w-lg flex flex-col items-center text-center gap-8 py-16 my-auto shrink-0">
         <div>
           <p className="text-xs tracking-[0.35em] uppercase text-white/40 mb-4">
             {(remembered || isReturning) ? (zh ? '欢迎回来' : 'Welcome back') : (zh ? '很高兴见到你' : 'Lovely to meet you')}

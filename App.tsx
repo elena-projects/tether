@@ -42,6 +42,25 @@ const MOOD_CORNERS = {
 };
 
 export default function App() {
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const syncViewport = () => {
+      // Keep overlays above the software keyboard without interfering with pinch zoom.
+      if (viewport.scale !== 1) return;
+      document.documentElement.style.setProperty('--visible-height', `${viewport.height}px`);
+      document.documentElement.style.setProperty('--visible-top', `${viewport.offsetTop}px`);
+    };
+    syncViewport();
+    viewport.addEventListener('resize', syncViewport);
+    viewport.addEventListener('scroll', syncViewport);
+    return () => {
+      viewport.removeEventListener('resize', syncViewport);
+      viewport.removeEventListener('scroll', syncViewport);
+      document.documentElement.style.removeProperty('--visible-height');
+      document.documentElement.style.removeProperty('--visible-top');
+    };
+  }, []);
   // Session State
   const [currentUser, setCurrentUser] = useState<{uid: string, username: string} | null>(null);
   const [showLanding, setShowLanding] = useState(true);
@@ -659,7 +678,8 @@ export default function App() {
       />
 
       <div 
-        className={`relative min-h-screen w-full transition-[background-color] duration-500 ease-linear flex flex-col items-center ${theme.text} font-mono selection:bg-white/30`}
+        inert={showLanding || phase === 'welcome'}
+        className={`app-shell relative min-h-screen w-full transition-[background-color] duration-500 ease-linear flex flex-col items-center ${theme.text} font-mono selection:bg-white/30`}
         style={{ backgroundColor: bgColor }}
       >
         {/* Film Grain */}
@@ -672,7 +692,7 @@ export default function App() {
         {!showLanding && (
           <>
             {/* Header */}
-            <header className="w-full px-4 py-3 md:p-8 grid grid-cols-[1fr_auto] md:flex md:flex-row md:justify-between items-center z-10 opacity-90 gap-x-3 gap-y-2 md:gap-6">
+            <header className="app-header w-full px-4 py-3 md:p-8 grid grid-cols-[1fr_auto] md:flex md:flex-row md:justify-between items-center z-10 opacity-90 gap-x-3 gap-y-2 md:gap-6">
               <div className="order-1 flex items-center gap-3 md:gap-4">
                 <svg width="40" height="40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9 md:w-10 md:h-10 opacity-90">
                   <circle cx="75" cy="25" r="12" strokeWidth="6" style={{ stroke: 'var(--rose)' }} />
@@ -738,17 +758,17 @@ export default function App() {
         )}
 
         {/* Main Content — a gentle 3-step ritual (check-in → respond → breathe) */}
-        <main className={`flex-1 w-full max-w-4xl px-5 md:px-8 flex flex-col items-center justify-start gap-8 mt-2 z-10 pb-20 transition-opacity duration-1000 ${showLanding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <main className={`app-main flex-1 w-full max-w-4xl px-5 md:px-8 flex flex-col items-center justify-start gap-8 mt-2 z-10 pb-20 transition-opacity duration-1000 ${showLanding ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-sm md:max-w-3xl mx-auto flex flex-col items-center gap-5 animate-in fade-in duration-700">
+          <div className="checkin-layout w-full max-w-sm md:max-w-3xl mx-auto flex flex-col items-center gap-5 animate-in fade-in duration-700">
             <p className="text-center text-lg md:text-2xl font-serif italic opacity-90 max-w-md leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="w-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 lg:gap-14">
-              <div className="relative flex justify-center w-44 md:w-56 -my-4 md:my-0 shrink-0">
+            <div className="checkin-instruments w-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-10 lg:gap-14">
+              <div className="checkin-orb relative flex justify-center w-44 md:w-56 -my-4 md:my-0 shrink-0">
                  <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
                  {isHealing && soundOn && (
                    <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
@@ -758,7 +778,7 @@ export default function App() {
                  )}
               </div>
 
-              <div className="w-full max-w-[300px] md:max-w-[360px] shrink-0">
+              <div className="checkin-controls w-full max-w-[300px] md:max-w-[360px] shrink-0">
                 <Controls
                   state={state}
                   onChange={setState}
@@ -1018,7 +1038,7 @@ export default function App() {
       </div>
 
       {/* feedback is reachable from anywhere in the app, but stays out of the way on the landing screen */}
-      {!showLanding && (
+      {!showLanding && phase === 'main' && (
         <FeedbackWidget
           language={language}
           onNeedHelp={() => setShowSafety(true)}
