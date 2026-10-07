@@ -672,9 +672,9 @@ export default function App() {
         {!showLanding && (
           <>
             {/* Header */}
-            <header className="w-full p-4 md:p-8 flex flex-col md:flex-row justify-between items-center z-10 opacity-90 gap-4">
-              <div className="flex items-center gap-4">
-                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className="opacity-90">
+            <header className="w-full px-4 py-3 md:p-8 grid grid-cols-[1fr_auto] md:flex md:flex-row md:justify-between items-center z-10 opacity-90 gap-x-3 gap-y-2 md:gap-6">
+              <div className="order-1 flex items-center gap-3 md:gap-4">
+                <svg width="40" height="40" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className="w-9 h-9 md:w-10 md:h-10 opacity-90">
                   <circle cx="75" cy="25" r="12" strokeWidth="6" style={{ stroke: 'var(--rose)' }} />
                   <circle cx="25" cy="75" r="10" stroke="none" style={{ fill: 'var(--rose)' }} />
                   <path d="M25 75 C 25 45 55 25 63 25" strokeWidth="4" className="opacity-80" />
@@ -682,9 +682,9 @@ export default function App() {
                 <h1 className="text-xl tracking-[0.3em] font-bold drop-shadow-sm">TETHER</h1>
               </div>
               
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 md:flex-nowrap md:gap-6">
-                 <button onClick={() => setShowKit(true)} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-90 hover:opacity-100 transition-opacity rounded-full px-3 py-1.5" style={{ background: 'rgb(var(--tint) / 0.14)', color: 'var(--rose)' }} title={zh ? '急救工具箱 · 情绪足迹' : 'Reset kit · your journey'}>
-                    <LifeBuoy size={15} /> <span>{zh ? '稳一稳' : 'Reset'}</span>
+              <div className="order-3 col-span-2 md:order-2 md:col-span-1 md:ml-auto flex items-center justify-center gap-5 md:gap-6">
+                 <button onClick={() => setShowKit(true)} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-90 hover:opacity-100 transition-opacity rounded-full px-2.5 sm:px-3 py-1.5" style={{ background: 'rgb(var(--tint) / 0.14)', color: 'var(--rose)' }} title={zh ? '急救工具箱 · 情绪足迹' : 'Reset kit · your journey'} aria-label={zh ? '急救工具箱 · 情绪足迹' : 'Reset kit · your journey'}>
+                    <LifeBuoy size={15} /> <span className="hidden sm:inline">{zh ? '稳一稳' : 'Reset'}</span>
                  </button>
 
                  <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'} aria-label={zh ? '大家的暖心话' : 'Wall of kind words'}>
@@ -720,12 +720,15 @@ export default function App() {
                     )}
                  </button>
 
-                 <button onClick={handleLogout} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-80 hover:opacity-100 transition-opacity border border-white/40 rounded-full px-3 py-1.5" title={zh ? '离开 Tether' : 'Leave Tether'}>
-                    <LogOut size={14} /> <span>{zh ? '离开' : 'Leave'}</span>
-                 </button>
+              </div>
 
-                <div className="text-xs tracking-widest uppercase border border-white/50 px-2 py-1 rounded-sm backdrop-blur-sm">
-                  {t.status}: {getRoleLabel()}
+              <div className="order-2 md:order-3 flex items-center justify-end gap-2 md:gap-4">
+                <button onClick={handleLogout} className="flex items-center gap-1.5 text-[11px] tracking-widest uppercase opacity-80 hover:opacity-100 transition-opacity border border-white/40 rounded-full px-2.5 sm:px-3 py-1.5" title={zh ? '离开 Tether' : 'Leave Tether'} aria-label={zh ? '离开 Tether' : 'Leave Tether'}>
+                  <LogOut size={14} /> <span className="hidden sm:inline">{zh ? '离开' : 'Leave'}</span>
+                </button>
+
+                <div className="text-[10px] sm:text-xs tracking-widest uppercase border border-white/50 px-2 py-1 rounded-sm backdrop-blur-sm whitespace-nowrap">
+                  <span className="hidden sm:inline">{t.status}: </span>{getRoleLabel()}
                 </div>
               </div>
             </header>
