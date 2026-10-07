@@ -1,3 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Tether — warm-neutral (暖砂/暖棕) theme with day/night modes.
    The page ground is a calm warm neutral so the mood-reactive "inner weather" colours
    stay the emotional signal, not the chrome. --tint is an RGB triplet that drives every
@@ -24,10 +30,40 @@ html[data-theme="night"] {
 }
 
 body {
+  font-family: 'Courier Prime', 'Courier New', monospace;
   background-color: var(--bg-base);
   color: rgb(var(--tint));
+  overflow-x: hidden;
   transition: background-color 1s ease, color 1s ease;
 }
+
+* {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+.cursor-blink { animation: blink 1s step-end infinite; }
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+.animate-float-up { animation: floatUp 1s ease-out forwards; }
+
+.visible {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+#ai-message-box { transition: opacity 1s ease-in; }
 
 /* slow breathing pulse for the closing "breathe with me" moment */
 @keyframes breathe {
@@ -35,6 +71,20 @@ body {
   50% { transform: scale(1.25); opacity: 0.6; }
 }
 .animate-breathe { animation: breathe 8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-breathe {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+}
 
 /* glass panels adapt to the theme ink instead of hard white */
 .glass-panel {

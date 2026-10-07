@@ -16,9 +16,34 @@ async function rGet(path: string): Promise<any> {
 async function rPut(path: string, data: any): Promise<void> {
   try { await fetch(`${BASE}/${path}.json`, { method: 'PUT', body: JSON.stringify(data) }); } catch {}
 }
-async function rPost(path: string, data: any): Promise<void> {
-  try { await fetch(`${BASE}/${path}.json`, { method: 'POST', body: JSON.stringify(data) }); } catch {}
-}
+
+const STATE_TOKEN_KEY = 'tether_state_token';
+
+export const establishUserSession = async (userId?: string | null): Promise<string> => {
+  const token = userId ? localStorage.getItem(STATE_TOKEN_KEY) : null;
+  try {
+    const response = await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'session', uid: userId || '', token: token || '' }),
+    });
+    if (!response.ok) throw new Error('state_session_failed');
+    const result = await response.json();
+    if (!/^user_[a-f0-9]{20}$/.test(result.uid) || typeof result.token !== 'string') {
+      throw new Error('state_session_invalid');
+    }
+    localStorage.setItem(STATE_TOKEN_KEY, result.token);
+    return result.uid;
+  } catch {
+    // Remote presence is an enhancement. The check-in remains fully usable offline or
+    // during a backend outage, but it will not publish an unauthenticated mood record.
+    if (userId) return userId;
+    localStorage.removeItem(STATE_TOKEN_KEY);
+    return `user_${Array.from(crypto.getRandomValues(new Uint8Array(10)), (n) => n.toString(16).padStart(2, '0')).join('')}`;
+  }
+};
+
+export const clearUserSessionToken = () => localStorage.removeItem(STATE_TOKEN_KEY);
 
 // --- User Management (local session) ---
 export const saveUserSession = (userId: string, username: string) => {
@@ -35,8 +60,15 @@ export const loadUserSession = () => ({
 // low can be matched with someone willing to send a light, and matching needs a uid and
 // a mood — never a name. Keeping names out means this record can't identify anybody.
 export const updateUserState = async (userId: string, _username: string, state: TetherState) => {
-  await rPut(`users/${userId}`, { state, lastActive: Date.now() });
-  await rPost(`history/${userId}`, { state, timestamp: Date.now() });
+  const token = localStorage.getItem(STATE_TOKEN_KEY);
+  if (!token) return;
+  try {
+    await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'state', uid: userId, token, state }),
+    });
+  } catch {}
 };
 
 // --- Social Discovery (Finding Drifters) ---
@@ -59,11 +91,29 @@ export const sendTetherMessage = async (
   toUserId: string,
   text: string,
   type: 'human' | 'ai' = 'human',
+  language: 'en' | 'zh' = 'zh',
 ) => {
-  await rPost('messages', {
-    text, senderName: fromUser.name, senderId: fromUser.uid, targetId: toUserId,
-    timestamp: Date.now(), voteCount: 0, type,
+  const response = await fetch('/api/wall', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      senderName: fromUser.name,
+      senderId: fromUser.uid,
+      targetId: toUserId,
+      language,
+      type,
+    }),
   });
+
+  if (response.ok) return;
+
+  let result: any = {};
+  try { result = await response.json(); } catch {}
+  const error: any = new Error(result.error || 'wall_post_failed');
+  error.code = result.blocked ? 'blocked' : (result.error || 'wall_post_failed');
+  error.reason = result.reason || '';
+  throw error;
 };
 
 export const voteForMessage = async (messageId: string) => {
@@ -149,10 +199,8 @@ export const listenToUserTotalVotes = (userId: string, callback: (totalVotes: nu
 
 // --- History ---
 export const getHistory = async (userId: string) => {
-  const obj = await rGet(`history/${userId}`);
-  if (!obj) return [];
-  return Object.entries<any>(obj)
-    .map(([id, d]) => ({ id, ...d }))
-    .sort((a: any, b: any) => b.timestamp - a.timestamp)
-    .slice(0, 20);
+  void userId;
+  // Mood history has no account system, so server-side ownership cannot be proved.
+  // Keep the trajectory local instead of exposing everyone's history by public UID.
+  return [];
 };

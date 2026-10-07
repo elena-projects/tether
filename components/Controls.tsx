@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { TetherState } from '../types';
 
 interface ControlsProps {
@@ -54,8 +54,25 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 10 : 5;
+    let { valence, arousal } = state;
+
+    if (e.key === 'ArrowLeft') valence -= step;
+    else if (e.key === 'ArrowRight') valence += step;
+    else if (e.key === 'ArrowDown') arousal -= step;
+    else if (e.key === 'ArrowUp') arousal += step;
+    else return;
+
+    e.preventDefault();
+    onChange({
+      valence: Math.max(0, Math.min(100, valence)),
+      arousal: Math.max(0, Math.min(100, arousal)),
+    });
+  };
+
   return (
-    <div className="w-full max-w-md mx-auto space-y-3 select-none touch-none">
+    <div className="w-full max-w-[340px] mx-auto space-y-2.5 select-none">
       
       {/* 2D Emotion Pad */}
       <div className="space-y-2">
@@ -72,10 +89,16 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
            {/* Pad Area - Responsive Square */}
            <div
              ref={padRef}
-             className="relative flex-1 aspect-square bg-white/10 border border-white/20 cursor-crosshair rounded-lg overflow-hidden backdrop-blur-sm touch-none"
+             role="group"
+             tabIndex={0}
+             aria-label={`${labels.valence}: ${state.valence} / 100. ${labels.arousal}: ${state.arousal} / 100`}
+             aria-describedby="emotion-pad-help"
+             className="relative flex-1 aspect-square bg-white/10 border border-white/25 cursor-crosshair rounded-lg overflow-hidden backdrop-blur-sm touch-none focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-2 focus:ring-offset-transparent"
              onPointerDown={handlePointerDown}
              onPointerMove={handlePointerMove}
              onPointerUp={handlePointerUp}
+             onPointerCancel={() => setIsDragging(false)}
+             onKeyDown={handleKeyDown}
            >
               {/* Background Gradient Grid Guide */}
               <div className="absolute inset-0 opacity-20 pointer-events-none" 
@@ -103,6 +126,43 @@ const Controls: React.FC<ControlsProps> = ({ state, onChange, textColor, labels 
         <div className={`flex justify-center text-[0.625rem] md:text-[0.8rem] tracking-[0.12em] font-bold opacity-70 pt-1 md:pt-2 ${textColor}`}>
              <span>{labels.lowEnergy}</span>
         </div>
+      </div>
+
+      <p id="emotion-pad-help" className="sr-only">
+        Use left and right arrow keys to change mood. Use up and down arrow keys to change energy.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4 rounded-md border border-white/15 bg-white/[0.04] px-3 py-2.5 md:px-4 md:py-3">
+        <label className="grid gap-1.5">
+          <span className={`flex items-center justify-between gap-2 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.08em] opacity-80 ${textColor}`}>
+            <span>{labels.valence}</span>
+            <span aria-hidden="true">{state.valence}</span>
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={state.valence}
+            onChange={(e) => onChange({ ...state, valence: Number(e.target.value) })}
+            aria-label={labels.valence}
+            className="w-full accent-[var(--rose)]"
+          />
+        </label>
+        <label className="grid gap-1.5">
+          <span className={`flex items-center justify-between gap-2 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.08em] opacity-80 ${textColor}`}>
+            <span>{labels.arousal}</span>
+            <span aria-hidden="true">{state.arousal}</span>
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={state.arousal}
+            onChange={(e) => onChange({ ...state, arousal: Number(e.target.value) })}
+            aria-label={labels.arousal}
+            className="w-full accent-[var(--rose)]"
+          />
+        </label>
       </div>
 
     </div>

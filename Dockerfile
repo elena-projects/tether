@@ -1,14 +1,14 @@
 # Serve the pre-built Vite static app (dist/) on Cloud Run.
 FROM nginx:1.27-alpine
 # nginx.conf is a template: the base image runs envsubst on /etc/nginx/templates/*.template
-# at start-up, injecting ${GEMINI_API_KEY} and ${TALKS_SECRET} (Cloud Run env vars).
+# at start-up, injecting the Cloud Run secrets used by the server-side proxies.
 # NGINX_ENVSUBST_FILTER limits substitution to those vars so nginx's own $host/$1 stay intact.
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 # The rate-limit zone lives in the http context, so it is a plain conf.d file rather than
 # part of the server template. The 00- prefix makes nginx read it before default.conf,
 # which refers to the zone.
 COPY ratelimit.conf /etc/nginx/conf.d/00-ratelimit.conf
-ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET|DATA_SECRET)
+ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET|DATA_SECRET|WALL_PROXY_SECRET)
 COPY dist /usr/share/nginx/html
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

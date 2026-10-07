@@ -37,6 +37,22 @@ export default defineConfig(({ mode }) => {
             secure: true,
             rewrite: (p: string) => p.replace(/^\/talks/, `/talks/${env.TALKS_SECRET || 'dev'}`),
           },
+          '/api/wall': {
+            target: 'https://elenaprojects.cc',
+            changeOrigin: true,
+            secure: true,
+            headers: {
+              'x-tether-proxy': env.WALL_PROXY_SECRET || 'dev',
+            },
+          },
+          '/api/state': {
+            target: 'https://elenaprojects.cc',
+            changeOrigin: true,
+            secure: true,
+            headers: {
+              'x-tether-proxy': env.WALL_PROXY_SECRET || 'dev',
+            },
+          },
           '/v1beta': {
             target: 'https://generativelanguage.googleapis.com',
             changeOrigin: true,
@@ -61,6 +77,18 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              react: ['react', 'react-dom'],
+              genai: ['@google/genai'],
+              d3: ['d3'],
+              icons: ['lucide-react'],
+            },
+          },
+        },
+      },
     };
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TetherState, TetherRole, Message, Language, UserProfile } from './types';
-import { moderateContent, generateFallbackMessage } from './services/geminiService';
-import { saveUserSession, loadUserSession, updateUserState, getDriftingUsers, sendTetherMessage, listenToInbox, voteForMessage, unvoteForMessage, listenToSpotlight, listenToUserTotalVotes, listenToWall } from './services/firebase';
+import { generateFallbackMessage } from './services/geminiService';
+import { saveUserSession, loadUserSession, establishUserSession, clearUserSessionToken, updateUserState, getDriftingUsers, sendTetherMessage, listenToInbox, voteForMessage, unvoteForMessage, listenToSpotlight, listenToUserTotalVotes, listenToWall } from './services/firebase';
 import { startHealingDrone, stopHealingDrone, unlockAudio } from './services/audioService';
 import { vibrate, stopVibration } from './services/haptics';
 import { getTranslation, streamMessages, aiFallbackMessages } from './translations';
@@ -72,7 +72,7 @@ export default function App() {
 
   // --- Day / Night theme (defaults to the calm warm-dark "night"; manual toggle locks it) ---
   const getInitialMode = (): 'day' | 'night' => {
-    const locked = localStorage.getItem('tether_theme');
+    const locked = localStorage.getItem('tether.theme') || localStorage.getItem('tether_theme');
     if (locked === 'day' || locked === 'night') return locked;
     return 'night';
   };
@@ -81,7 +81,8 @@ export default function App() {
   const toggleMode = () => {
     const m = mode === 'day' ? 'night' : 'day';
     setMode(m);
-    localStorage.setItem('tether_theme', m);
+    localStorage.setItem('tether.theme', m);
+    localStorage.removeItem('tether_theme');
   };
   // Sound on/off for the healing drone (persisted). Default OFF — many users open this in
   // class or in public, where a surprise drone is jarring; they can turn it on deliberately.
@@ -145,26 +146,29 @@ export default function App() {
   useEffect(() => {
     const session = loadUserSession();
     const autoEnter = localStorage.getItem('tether_auto_enter') === 'true';
+    let cancelled = false;
 
-    // If session exists AND auto-enter is enabled, skip landing
-    if (session.uid && session.username && autoEnter) {
-      setCurrentUser({ uid: session.uid, username: session.username });
-      setShowLanding(false);
-    } else {
-      // Otherwise, force landing, but pre-fill if session exists (handled by LandingOverlay manually if we wanted, but not needed here)
-      if (session.uid && session.username) {
-         setCurrentUser({ uid: session.uid, username: session.username });
+    const restore = async () => {
+      if (!session.uid || !session.username) {
+        setShowLanding(true);
+        return;
       }
-      setShowLanding(true);
-    }
+      const uid = await establishUserSession(session.uid);
+      if (cancelled) return;
+      if (uid !== session.uid) saveUserSession(uid, session.username);
+      setCurrentUser({ uid, username: session.username });
+      setShowLanding(!autoEnter);
+    };
+    restore();
     
     const storedVotes = localStorage.getItem('tether_voted_ids');
     if (storedVotes) {
       setVotedIds(new Set(JSON.parse(storedVotes)));
     }
+    return () => { cancelled = true; };
   }, []);
 
-  const handleLogin = (username: string, autoEnter: boolean) => {
+  const handleLogin = async (username: string, autoEnter: boolean) => {
     // Only keep the stored identity (and its history / sent-message record) if this is
     // genuinely the same person: they typed the same name, or they'd previously chosen
     // "remember my identity". A different name on a shared browser starts fresh, so nobody
@@ -176,7 +180,7 @@ export default function App() {
       rememberedBefore ||
       (!!existingUsername && existingUsername.trim().toLowerCase() === username.trim().toLowerCase())
     );
-    const uid = sameIdentity ? existingUid! : 'user_' + Math.random().toString(36).substr(2, 9);
+    const uid = await establishUserSession(sameIdentity ? existingUid : null);
 
     saveUserSession(uid, username);
     setCurrentUser({ uid, username });
@@ -432,7 +436,8 @@ export default function App() {
     setSendWarning("");
     setIsProcessing(true);
 
-    // 1) Local first-line safety net (works even if the AI guardian is unreachable).
+    // Local first-line safety net for immediate feedback. The server repeats this check
+    // and runs the authoritative Guardian moderation before writing anything to the wall.
     const badLocal = /(去死|自杀|自残|杀了你|滚蛋|傻[逼比屄]|贱人|微信号|加我微信|我的电话|手机号|qq号|kill yourself|\bkys\b)/i;
     if (badLocal.test(textToSend)) {
       setSendWarning(zh ? '这句话可能会让人更难受，也不会被送出。换一句温柔的话好吗？💗' : "This might hurt someone and won't be sent. Could you try something gentler? 💗");
@@ -440,33 +445,20 @@ export default function App() {
       return;
     }
 
-    // 2) AI Guardian — STRICT & fail-closed: only send if it explicitly says isSafe.
-    //    Any negativity, ambiguity, or an unverifiable/errored check → do NOT send.
-    let guard;
-    try {
-      guard = await moderateContent(textToSend, language);
-    } catch {
-      guard = { isSafe: false, reason: 'Guardian connection error.' } as any;
-    }
-    if (guard.isSafe !== true) {
-      const connErr = guard.reason === 'Guardian connection error.';
-      setSendWarning(
-        connErr
-          ? (zh ? '现在没法确认这句话，先没有送出。请稍后再试，或换一句更温柔的话 💗' : "Couldn't verify this right now, so it wasn't sent. Please try again in a moment. 💗")
-          : (zh ? '这句话不够温柔，没有送出。换一句暖一点、鼓励的话好吗？💗' : "This wasn't warm enough to send. Try something gentler and kinder? 💗") + (guard.reason ? ` ${guard.reason}` : '')
-      );
-      setIsProcessing(false);
-      return;
-    }
-
-    // 3) Deliver to a real drifting user if one is online, otherwise to the public wall.
+    // Deliver to a real drifting user if one is online, otherwise to the public wall.
     let sentTarget = 'wall';
     const justSentId = `local-${Date.now()}`;
     try {
       const drifters = await getDriftingUsers(currentUser.uid);
       const targetUid = drifters.length > 0 ? drifters[0].uid : 'wall';
       sentTarget = targetUid === 'wall' ? 'wall' : 'someone';
-      await sendTetherMessage({ uid: currentUser.uid, name: currentUser.username }, targetUid, textToSend, 'human');
+      await sendTetherMessage(
+        { uid: currentUser.uid, name: currentUser.username },
+        targetUid,
+        textToSend,
+        'human',
+        language === 'en' ? 'en' : 'zh',
+      );
 
       // Show it on the wall straight away. The wall refreshes on a 6-second poll, so
       // without this you can send something, open the wall to check, and not find it —
@@ -486,7 +478,17 @@ export default function App() {
         }, ...prev];
       });
       setWallLoaded(true);
-    } catch (e) { console.warn('send failed', e); }
+    } catch (e: any) {
+      console.warn('send failed', e);
+      const blocked = e?.code === 'blocked';
+      setSendWarning(
+        blocked
+          ? (zh ? '这句话不够温柔，没有送出。换一句暖一点、鼓励的话好吗？💗' : "This wasn't warm enough to send. Try something gentler and kinder? 💗") + (e?.reason ? ` ${e.reason}` : '')
+          : (zh ? '现在没法确认这句话，先没有送出。请稍后再试。💗' : "Couldn't verify this right now, so it wasn't sent. Please try again in a moment. 💗")
+      );
+      setIsProcessing(false);
+      return;
+    }
 
     // Keep a private record of the kind words YOU sent, tagged with your identity so only
     // you see them back (a different person on this browser won't inherit them).
@@ -538,6 +540,7 @@ export default function App() {
     localStorage.removeItem('tether_username');
     localStorage.removeItem('tether_auto_enter');
     localStorage.removeItem('tether_voted_ids');
+    clearUserSessionToken();
     setCurrentUser(null);
     setVotedIds(new Set());
     setState(INITIAL_STATE);
@@ -684,7 +687,7 @@ export default function App() {
                     <LifeBuoy size={15} /> <span>{zh ? '稳一稳' : 'Reset'}</span>
                  </button>
 
-                 <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'}>
+                 <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'} aria-label={zh ? '大家的暖心话' : 'Wall of kind words'}>
                     <Sparkles size={18} />
                  </button>
 
@@ -698,11 +701,11 @@ export default function App() {
                  </button>
                  )}
 
-                 <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-70 hover:opacity-100' : 'opacity-40 hover:opacity-70'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-pressed={soundOn}>
+                 <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-80 hover:opacity-100' : 'opacity-60 hover:opacity-90'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-label={soundOn ? (zh ? '关闭疗愈音' : 'Turn sound off') : (zh ? '开启疗愈音' : 'Turn sound on')} aria-pressed={soundOn}>
                     {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}
                  </button>
 
-                 <button onClick={toggleMode} className="opacity-70 hover:opacity-100 transition-opacity" title={mode === 'day' ? '夜间模式' : '日间模式'}>
+                 <button onClick={toggleMode} className="opacity-70 hover:opacity-100 transition-opacity" title={mode === 'day' ? '夜间模式' : '日间模式'} aria-label={mode === 'day' ? (zh ? '切换到夜间模式' : 'Switch to night mode') : (zh ? '切换到日间模式' : 'Switch to day mode')}>
                     {mode === 'day' ? <Moon size={18} /> : <Sun size={18} />}
                  </button>
 
@@ -710,7 +713,7 @@ export default function App() {
                     {zh ? 'EN' : '中'}
                  </button>
 
-                 <button onClick={() => setShowHistory(true)} className="opacity-70 hover:opacity-100 transition-opacity relative">
+                 <button onClick={() => setShowHistory(true)} className="opacity-70 hover:opacity-100 transition-opacity relative" aria-label={zh ? '查看情绪足迹' : 'View your journey'}>
                     <BookOpen size={18} />
                     {hasNewHealing && (
                       <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(248,113,113,0.8)]" />
@@ -736,35 +739,37 @@ export default function App() {
 
           {/* ===== STEP 1 — CHECK IN ===== */}
           {step === 'checkin' && (
-          <div className="w-full max-w-sm md:max-w-lg mx-auto flex flex-col items-center gap-7 md:gap-6 animate-in fade-in duration-700">
+          <div className="w-full max-w-sm md:max-w-lg mx-auto flex flex-col items-center gap-4 animate-in fade-in duration-700">
             <p className="text-center text-lg md:text-2xl font-serif italic opacity-90 max-w-md leading-relaxed">
               {zh ? '此刻，你的内心是什么天气?' : "What's your inner weather right now?"}
             </p>
 
-            <div className="relative flex justify-center w-52 md:w-64 -my-2 md:-my-8">
-               <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
-               {isHealing && soundOn && (
-                 <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
-                    <Volume2 size={12} />
-                    <span className="text-[9px] tracking-widest uppercase">{zh ? '双耳疗愈音已开启' : 'Binaural Drone Active'}</span>
-                 </div>
-               )}
+            <div className="w-full flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+              <div className="relative flex justify-center w-44 md:w-48 -my-4 md:my-0 shrink-0">
+                 <OrbCanvas state={state} isHealing={isHealing} isPulsing={isPulsing} />
+                 {isHealing && soundOn && (
+                   <div className="absolute bottom-4 flex items-center gap-2 text-white/40 animate-pulse">
+                      <Volume2 size={12} />
+                      <span className="text-[9px] tracking-widest uppercase">{zh ? '双耳疗愈音已开启' : 'Binaural Drone Active'}</span>
+                   </div>
+                 )}
+              </div>
+
+              <div className="w-full max-w-[300px] md:max-w-[340px]">
+                <Controls
+                  state={state}
+                  onChange={setState}
+                  textColor={theme.text}
+                  labels={{
+                    valence: t.valence, arousal: t.arousal,
+                    unpleasant: t.unpleasant, pleasant: t.pleasant,
+                    lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="w-full max-w-[300px] md:max-w-[400px]">
-              <Controls
-                state={state}
-                onChange={setState}
-                textColor={theme.text}
-                labels={{
-                  valence: t.valence, arousal: t.arousal,
-                  unpleasant: t.unpleasant, pleasant: t.pleasant,
-                  lowEnergy: t.lowEnergy, highEnergy: t.highEnergy,
-                }}
-              />
-            </div>
-
-            <p className={`text-[11px] tracking-widest uppercase text-center leading-relaxed max-w-[280px] transition-opacity duration-700 ${hasInteracted ? 'opacity-0' : 'opacity-75 animate-pulse'}`} style={{ color: 'var(--rose)' }}>
+            <p className={`text-[10px] md:text-[11px] tracking-widest uppercase text-center leading-relaxed max-w-[280px] transition-opacity duration-700 ${hasInteracted ? 'opacity-0' : 'opacity-75 animate-pulse'}`} style={{ color: 'var(--rose)' }}>
               {zh ? '拖动圆点，选出现在的心情和能量' : 'Drag to set your mood and energy'}
             </p>
 
@@ -1002,7 +1007,7 @@ export default function App() {
           )}
 
           {/* always-reachable crisis support */}
-          <button onClick={() => setShowSafety(true)} className="mt-10 text-[11px] tracking-widest opacity-40 hover:opacity-90 transition-opacity flex items-center gap-1.5">
+          <button onClick={() => setShowSafety(true)} className="mt-8 text-[11px] tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center gap-2 rounded-full border border-white/20 px-4 py-2">
             <Heart size={11} /> {zh ? '需要真人帮助' : 'Talk to a real person'}
           </button>
         </main>
