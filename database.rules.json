@@ -1,5 +1,25 @@
 {
   "rules": {
+    "emotionSpaces": {
+      "$emotion": {
+        "notes": {
+          ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
+          "$id": {
+            ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && !data.exists() && newData.exists() && ($emotion == 'anxious' || $emotion == 'sad' || $emotion == 'lonely' || $emotion == 'tired' || $emotion == 'numb' || $emotion == 'calm')",
+            ".validate": "newData.hasChildren(['text', 'timestamp'])",
+            "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 300" },
+            "timestamp": { ".validate": "newData.isNumber() && newData.val() <= now + 10000" },
+            "encouragements": {
+              "$choice": {
+                ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && data.parent().parent().child('text').exists()",
+                ".validate": "($choice == 'c0' || $choice == 'c1' || $choice == 'c2') && newData.isNumber() && newData.val() == (data.exists() ? data.val() : 0) + 1"
+              }
+            },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
     "users": {
       "$box": {
         ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",

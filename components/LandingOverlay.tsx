@@ -20,8 +20,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username.trim()) return;
-    performExit(username);
+    performExit(username.trim());
   };
 
   const performExit = async (name: string) => {
@@ -84,7 +83,7 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
          <form onSubmit={handleSubmit} className="mt-8 md:mt-9 flex flex-col items-center gap-4 w-full max-w-sm animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
             <div className="w-full">
               <label htmlFor="display-name" className="block text-center text-[11px] font-bold tracking-[0.2em] text-white/80 uppercase mb-3">
-                {zh ? '显示名称' : 'Display name'}
+                {zh ? '昵称（可留空）' : 'Nickname (optional)'}
               </label>
               <input
                 id="display-name"
@@ -98,13 +97,13 @@ const LandingOverlay: React.FC<LandingProps> = ({ onEnter, language, setLanguage
                 className="w-full rounded-md border border-white/25 bg-white/[0.06] px-4 py-3.5 text-center font-sans text-base text-white placeholder:text-white/45 focus:outline-none focus:border-[#d99a7d] focus:ring-2 focus:ring-[#d99a7d]/25 transition-colors"
               />
               <p id="display-name-help" className="mt-2.5 text-center text-[11px] leading-relaxed text-white/60">
-                {zh ? '不需要真实姓名。只有选择记住时，才会保存在这台设备上。' : 'No real name needed. It stays on this device only if you choose remember.'}
+                {zh ? '不填也可以进入。情绪空间里的话不会关联你的昵称。' : 'You can enter without a name. Notes in emotion spaces are not linked to it.'}
               </p>
             </div>
 
             <button
               type="submit"
-              disabled={!username.trim() || isSubmitting}
+              disabled={isSubmitting}
               className="group flex w-full justify-center items-center gap-3 px-8 py-3.5 bg-[#d1855f] text-[#2b2521] hover:bg-[#dfa07f] transition-all duration-300 rounded-full text-xs md:text-sm font-sans tracking-[0.16em] uppercase disabled:opacity-35 disabled:cursor-not-allowed shadow-[0_8px_28px_rgba(209,133,95,0.2)]"
             >
               <span className="font-bold">{isSubmitting ? (zh ? '正在进入…' : 'Entering…') : t.enter}</span>

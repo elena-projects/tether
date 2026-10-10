@@ -21,6 +21,7 @@ import ConfideCompose from './components/ConfideCompose';
 import TalksPanel from './components/TalksPanel';
 import { listenToTalks, myTalks, Talk, TALKS_ENABLED } from './services/talks';
 import FeedbackWidget from './components/FeedbackWidget';
+import EmotionSpaces from './components/EmotionSpaces';
 import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy, MessageCircle } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
@@ -188,6 +189,13 @@ export default function App() {
   }, []);
 
   const handleLogin = async (username: string, autoEnter: boolean) => {
+    if (!username.trim()) {
+      setCurrentUser(null);
+      setPhase('main');
+      setStep('respond');
+      setShowLanding(false);
+      return;
+    }
     // Only keep the stored identity (and its history / sent-message record) if this is
     // genuinely the same person: they typed the same name, or they'd previously chosen
     // "remember my identity". A different name on a shared browser starts fresh, so nobody
@@ -253,14 +261,6 @@ export default function App() {
     return () => { clearInterval(id); stopVibration(); };
   }, [step, showLanding]);
 
-  // --- FIREBASE SYNC (DEBOUNCED) ---
-  useEffect(() => {
-    if (!currentUser) return;
-    const timer = setTimeout(() => {
-      updateUserState(currentUser.uid, currentUser.username, state);
-    }, 1000); 
-    return () => clearTimeout(timer);
-  }, [state, currentUser]);
 
   // --- TRACK INTERACTION FOR NUDGE ---
   useEffect(() => {
@@ -310,91 +310,23 @@ export default function App() {
        });
     });
 
-    const unsubWall = listenToWall((msgs) => { setWallMessages(msgs); setWallLoaded(true); });
-
     return () => {
       unsubInbox(); unsubTalks();
       unsubSpotlight();
       unsubHealing();
-      unsubWall();
     };
   }, [currentUser, showHistory]);
+
+  useEffect(() => {
+    if (showLanding) return;
+    return listenToWall((msgs) => { setWallMessages(msgs); setWallLoaded(true); });
+  }, [showLanding]);
 
   // Clear notification when history opens
   useEffect(() => {
     if (showHistory) setHasNewHealing(false);
   }, [showHistory]);
 
-  // --- STRICT 15-SECOND DRIFTING TIMER & AI FALLBACK ---
-  
-  useEffect(() => {
-    // 1. CLEAR EXISTING TIMER
-    if (driftTimerRef.current) {
-      clearTimeout(driftTimerRef.current);
-      driftTimerRef.current = null;
-    }
-
-    // 2. Logic: Only start timer if Drifting AND Inbox is Empty
-    if (role === TetherRole.DRIFTING && inbox.length === 0 && currentUser) {
-      console.log("Drifting state detected. Starting 15s timer...");
-      
-      driftTimerRef.current = setTimeout(async () => {
-        const uid = currentUser.uid;
-        let text: string;
-        let senderName = 'AI Companion';
-        let msgType: 'human' | 'ai' = 'ai';
-
-        // Prefer a REAL kind note someone already wrote to the wall — a human voice comforts
-        // more than a generated one. Fall back to personalised AI comfort if the wall is empty.
-        const pool = (wallRef.current || []).filter(m => m.text && m.type === 'human' && m.senderId !== uid);
-        if (pool.length > 0 && Math.random() < 0.6) {
-          const picked = pool[Math.floor(Math.random() * pool.length)];
-          text = picked.text;
-          senderName = picked.senderName || (language === 'zh' ? '一位朋友' : 'a friend');
-          msgType = 'human';
-        } else {
-          try {
-            text = (await generateFallbackMessage(stateRef.current, language) || '').trim();
-            if (!text) throw new Error('empty');
-          } catch {
-            const messages = aiFallbackMessages[language] || aiFallbackMessages['en'];
-            text = messages[Math.floor(Math.random() * messages.length)];
-          }
-        }
-
-        const fallbackMsg: Message = {
-          id: 'comfort_' + Date.now(), text, senderName, senderId: msgType === 'human' ? 'wall' : '0',
-          targetId: uid, timestamp: Date.now(), voteCount: 0, type: msgType,
-        };
-        setLocalAiMessage(fallbackMsg);
-
-        // NOTE: comfort messages are the app (or another person) speaking TO you, not your
-        // own words — so they are deliberately NOT written to your journal / "what you told
-        // yourself". Your journal holds only your own check-ins.
-        setJourneyVersion(v => v + 1);
-      }, 15000); // Strict 15 Seconds
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (driftTimerRef.current) clearTimeout(driftTimerRef.current);
-    };
-  }, [role, inbox.length, currentUser, language]); // Dependency logic handles interruption
-
-  // --- ANCHOR TIMEOUT LOGIC ---
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    if (role === TetherRole.ANCHORED) {
-      if (!selectedDrifterId) {
-        timer = setTimeout(() => {
-          setShowBroadcastOption(true);
-        }, 15000);
-      }
-    } else {
-      setShowBroadcastOption(false);
-    }
-    return () => clearTimeout(timer);
-  }, [role, selectedDrifterId]);
 
   // --- ROLE & COLOR LOGIC ---
   useEffect(() => {
@@ -576,9 +508,7 @@ export default function App() {
   };
 
   const getRoleLabel = () => {
-    if (role === TetherRole.DRIFTING) return t.roleDrifting;
-    if (role === TetherRole.ANCHORED) return t.roleAnchored;
-    return t.roleWitness;
+    return step === 'respond' ? (zh ? '情绪空间' : 'Emotion spaces') : moodNow;
   };
 
   // Determine dynamic title for Drifting State
@@ -796,8 +726,8 @@ export default function App() {
               {zh ? '拖动圆点，选出现在的心情和能量' : 'Drag to set your mood and energy'}
             </p>
 
-            <button onClick={() => setStep('reflect')} className="group flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
-              <span className="font-bold">{zh ? '就先这样，继续' : 'Continue'}</span>
+            <button onClick={() => setStep('respond')} className="group flex items-center gap-3 px-9 py-3.5 rounded-full text-sm tracking-widest transition-all duration-500" style={{ background: 'var(--rose)', color: '#2b2420' }}>
+              <span className="font-bold">{zh ? '进入情绪空间' : 'Enter an emotion space'}</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
@@ -817,197 +747,9 @@ export default function App() {
           </div>
           )}
 
-          {/* ===== STEP 2 — RESPOND (branches by mood) ===== */}
+          {/* Emotion spaces belong to a moment, not to an account or a role. */}
           {step === 'respond' && (
-          <div className="w-full max-w-xl flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <button onClick={() => setStep('checkin')} className="self-start flex items-center gap-2 text-xs opacity-55 hover:opacity-100 transition-opacity">
-              <ArrowLeft size={13} /> {zh ? `此刻：${moodNow}` : `Now: ${moodNow}`} · {zh ? '调整' : 'adjust'}
-            </button>
-
-            {/* --- DRIFTING (RECEIVER) --- */}
-            {role === TetherRole.DRIFTING && (
-              <div id="drifting-container" className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-700 w-full">
-                <h2 className={`text-2xl font-bold ${theme.accent} transition-all duration-500`}>
-                    {getDriftingTitle()}
-                </h2>
-                <p className="opacity-90 text-sm leading-relaxed drop-shadow-sm">{t.driftingDesc}</p>
-
-                <button onClick={() => setShowSafety(true)} className="w-full text-left flex items-center gap-3 p-4 rounded-xl glass-panel hover:bg-white/10 transition-colors">
-                  <Heart size={16} className="shrink-0 text-teal-300" />
-                  <span className="text-[13px] leading-relaxed opacity-90">
-                    {zh ? '如果此刻真的撑不住，有人可以真的帮你。点这里 →' : "If it's really too much right now, real people can help. Tap here →"}
-                  </span>
-                </button>
-
-                <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pr-2 mt-4">
-                  {/* Strict Logic: Show Loader if Empty AND no Local Fallback. Show Message if either exists. */}
-                  {displayInbox.length === 0 ? (
-                    // --- LOADING CIRCLE ---
-                    <div id="loading-circle" className="flex flex-col items-center justify-center h-64 transition-all duration-1000 animate-in fade-in">
-                       <div className="relative flex items-center justify-center mb-8">
-                          {/* Outer Ripple */}
-                          <div className="absolute inset-0 bg-teal-500/10 rounded-full animate-ping opacity-20 duration-[3000ms] w-16 h-16"></div>
-                          {/* Inner Pulse Ring */}
-                          <div className="w-16 h-16 border border-teal-500/30 rounded-full animate-[spin_4s_linear_infinite] opacity-50 border-t-transparent"></div>
-                          {/* Core Dot */}
-                          <div className="absolute w-1.5 h-1.5 bg-teal-100 rounded-full shadow-[0_0_15px_rgba(20,184,166,0.8)] animate-pulse"></div>
-                       </div>
-                       <span className="text-[10px] tracking-[0.3em] font-bold text-teal-100/70 animate-pulse">{zh ? '正在为你找人陪陪你…' : 'SEARCHING FOR A TETHER...'}</span>
-                    </div>
-                  ) : (
-                    // --- AI MESSAGE BOX (Force Reveal) ---
-                    <div id="ai-message-box" className="visible">
-                      {displayInbox.map((msg) => (
-                        <MessageCard 
-                          key={msg.id} 
-                          msg={msg} 
-                          onVote={handleVote} 
-                          isVoted={votedIds.has(msg.id)}
-                          theme={theme}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* --- WITNESS (COMMUNITY) --- */}
-            {role === TetherRole.WITNESS && (
-              <div className="space-y-6 w-full animate-in fade-in slide-in-from-right-4 duration-700">
-                <div>
-                  <h2 className={`text-xl font-bold ${theme.accent} mb-2`}>{t.witnessTitle}</h2>
-                  <p className="text-xs uppercase tracking-widest opacity-70">{t.communityStream}</p>
-                </div>
-                
-                <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pr-2">
-                  <div className="p-5 border border-white/10 bg-white/5 rounded-sm shadow-inner relative overflow-hidden">
-                     <div className="absolute top-0 right-0 p-2 opacity-30">
-                        <Sparkles size={16} />
-                     </div>
-                     <p className="text-sm opacity-90 text-center italic font-serif leading-relaxed">
-                        "{spotlightMessage ? spotlightMessage.text : t.defaultWisdom}"
-                     </p>
-                     <div className="flex justify-center mt-3 opacity-50 text-[10px] uppercase tracking-widest gap-2">
-                        <span>{zh ? '最高共鸣' : 'Highest Resonance'}</span>
-                        {spotlightMessage && <span>• {spotlightMessage.voteCount} {zh ? '颗心' : 'Hearts'}</span>}
-                     </div>
-                  </div>
-
-                  {!wallLoaded && (
-                    <p className="text-center text-[12px] opacity-40 py-8">
-                      {zh ? '正在把大家写下的话取过来…' : 'Fetching what people wrote…'}
-                    </p>
-                  )}
-
-                  {wallMessages.map((msg) => {
-                    const voted = votedIds.has(msg.id);
-                    const named = msg.senderName && !['Guide', '小伙伴', 'AI Companion'].includes(msg.senderName);
-                    // Same rule as the wall panel: you can reach a real person, but not the
-                    // AI and not yourself.
-                    const canReach = msg.type === 'human' && !!msg.senderId && msg.senderId !== currentUser?.uid;
-                    return (
-                    <div key={msg.id} className={`p-4 border ${theme.uiBorder} bg-white/5 backdrop-blur-md rounded-sm transition-all`}>
-                      <p className="text-sm font-serif italic mb-3 drop-shadow-sm">"{msg.text}"</p>
-                      <div className="flex justify-between items-center mt-2 text-[10px] opacity-60">
-                        <span className="tracking-widest">{named ? `— ${msg.senderName}` : ''}</span>
-                        <div className="flex items-center gap-3">
-                          {TALKS_ENABLED && canReach && (
-                            <button
-                              onClick={() => setConfideTo(msg)}
-                              title={zh ? '想跟 TA 说说' : 'reach out to them'}
-                              className="flex items-center gap-1 hover:text-teal-200 transition-colors cursor-pointer"
-                            >
-                              <MessageCircle size={11} />
-                              <span className="tracking-widest">{zh ? '说说' : 'talk'}</span>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleVote(msg.id)}
-                            title={voted ? (zh ? '取消爱心' : 'remove heart') : (zh ? '给它一颗心' : 'send a heart')}
-                            className={`flex items-center gap-1 transition-colors cursor-pointer ${voted ? 'text-teal-300' : 'hover:text-teal-200'}`}
-                          >
-                            <span>{msg.voteCount || 0}</span>
-                            <Heart size={11} className={voted ? 'fill-current' : 'fill-white/40'} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* --- ANCHORED (HELPER) - UPDATED SIMULATION --- */}
-            {role === TetherRole.ANCHORED && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-700 h-full flex flex-col justify-center">
-                
-                {sentSuccess ? (
-                    // SUCCESS / THANK YOU SCREEN
-                    <div className="flex flex-col items-center justify-center text-center space-y-8 py-8 animate-in fade-in zoom-in-95 duration-1000">
-                        <div className="relative">
-                            <Sparkles className="text-teal-200 animate-pulse filter drop-shadow-[0_0_10px_rgba(45,212,191,0.5)]" size={56} />
-                            <div className="absolute inset-0 bg-teal-400/20 blur-xl rounded-full animate-ping"></div>
-                        </div>
-                        
-                        <div className="space-y-4 max-w-sm mx-auto">
-                            <h2 className="text-2xl font-bold text-teal-100 tracking-[0.3em] uppercase">{zh ? '已送达 💗' : 'Tethered'}</h2>
-                            <p className="text-lg font-serif italic text-white/80 leading-relaxed">
-                                {zh ? '"你的暖心话已经送出去啦，会有人因为你而好受一点。谢谢你 💗"' : '"Your message has been tethered. Your light is now reaching a drifter in the fog. Thank you for your empathy."'}
-                            </p>
-                        </div>
-
-                        <button 
-                            onClick={handleBackToHome}
-                            className="group flex items-center gap-3 px-8 py-3 mt-4 border border-white/20 hover:border-white/50 hover:bg-white/5 transition-all rounded-sm uppercase tracking-widest text-xs"
-                        >
-                            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                            <span>{zh ? '回到中心' : 'Return to Center'}</span>
-                        </button>
-                    </div>
-                ) : (
-                    // SEND MESSAGE SCREEN (SIMULATED TARGET)
-                    <div className="animate-in fade-in duration-700">
-                        <h2 className={`text-3xl font-bold ${theme.accent} mb-4`}>{t.anchoredTitle}</h2>
-                        
-                        <p className="text-sm opacity-70 mb-6 flex items-center gap-2 animate-pulse">
-                            <span className="w-2 h-2 bg-teal-400 rounded-full shadow-[0_0_8px_rgba(45,212,191,0.8)]"></span>
-                            {zh ? '你正在陪伴一位此刻有点难过的人…' : <>You are connecting with a stranger who feels <span className="text-teal-300 font-bold uppercase tracking-widest text-base">{targetDescriptor}</span>...</>}
-                        </p>
-
-                        <div className="relative">
-                            <textarea
-                                value={anchorInput}
-                                onChange={(e) => { setAnchorInput(e.target.value); if (sendWarning) setSendWarning(""); }}
-                                placeholder={t.placeholder}
-                                className={`w-full h-40 bg-black/20 border-2 ${sendWarning ? 'border-rose-400/60' : theme.uiBorder} p-6 focus:outline-none focus:ring-1 focus:ring-teal-400/50 focus:border-teal-400/50 text-lg resize-none placeholder:text-white/20 rounded-sm backdrop-blur-sm transition-all`}
-                            />
-                            <button
-                                id="send-button"
-                                onClick={handleSimulatedSend}
-                                disabled={isProcessing || !anchorInput.trim()}
-                                className={`absolute bottom-4 right-4 p-3 bg-white/10 hover:bg-teal-900/40 border border-white/10 hover:border-teal-400/50 hover:scale-110 transition-all rounded-full disabled:opacity-30 text-white shadow-lg`}
-                            >
-                                {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                            </button>
-                        </div>
-                        {sendWarning && (
-                          <div className="mt-4 flex items-start gap-2 text-[13px] text-rose-200/90 bg-rose-900/20 border border-rose-400/25 rounded-lg px-4 py-3 animate-in fade-in duration-300">
-                            <ShieldAlert size={15} className="shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">{sendWarning}</span>
-                          </div>
-                        )}
-                    </div>
-                )}
-              </div>
-            )}
-
-            <button onClick={() => setStep('close')} className="self-center mt-3 flex items-center gap-3 px-8 py-3 rounded-full text-sm tracking-widest border border-white/20 hover:bg-white/5 transition-colors">
-              <span>{zh ? '好了，歇一会儿' : 'Take a breath'}</span>
-              <ArrowRight size={16} />
-            </button>
-          </div>
+            <EmotionSpaces language={language} state={state} onAdjust={() => setStep('checkin')} onRest={() => setStep('close')} onNeedHelp={() => setShowSafety(true)} />
           )}
 
           {/* ===== STEP 3 — CLOSE (breathe + thanks) ===== */}
