@@ -61,14 +61,16 @@ The Portfolio backend was deployed as `portfolio-mm1a5lm5v-elenazheng.vercel.app
 and aliased to `elenaprojects.cc`. Unauthenticated requests return 403. The deployed
 Portfolio homepage was verified identical to its previously live content.
 
-Database-rule deployment was blocked by expired gcloud credentials for
-`elena@geminiat.work`. Tether's new frontend has deliberately not been deployed.
-After that account reauthenticates, publish the rules, verify the real backend
-read/write/encouragement path with disposable test data, then deploy Tether.
-The last fully active frontend is still `tether-00084-mp7`.
+Firebase rules were published with `elena@geminiat.work`. The production backend
+passed a real read, moderated anonymous write, preset encouragement, read-back, and
+cleanup check. The disposable verification note was deleted and confirmed absent.
+Tether revision `tether-00085-q5q` is serving 100% of Cloud Run traffic. The previous
+stable rollback revision is `tether-00084-mp7`.
 
 Seven handler tests, TypeScript checking, and the production build pass. Browser
 fixtures verified reading, publishing, encouragement, failure preservation, and
 room isolation. Layout checks covered 320x568, 390x844, 667x375, 768x1024, and
-1440x900 without horizontal overflow. Real model moderation and Firebase writes
-remain unverified until Google Cloud access is restored.
+1440x900 without horizontal overflow. Production UI checks also verified optional-name
+entry, all six emotion choices, room reading, and a 390x844 mobile viewport with no
+horizontal overflow. Direct calls to the private Portfolio endpoint return 403 while
+the same-origin Tether proxy returns 200.
