@@ -131,6 +131,7 @@ body {
 .space-note { border-bottom: 1px solid rgb(var(--tint) / .18); padding: 1.5rem 0; }
 .space-note-text { font-family: Georgia, serif; font-size: 1.125rem; line-height: 1.9; white-space: pre-wrap; }
 .space-note-meta { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .75rem; font-size: .75rem; opacity: .75; }
+.space-note-meta > span { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; flex-wrap: wrap; }
 .space-encouragement { display: flex; align-items: baseline; gap: .5rem; padding: .5rem 0; font-size: .8125rem; line-height: 1.7; }
 .space-encouragement > svg { flex-shrink: 0; }
 .space-encouragement > span:last-child { margin-left: auto; }

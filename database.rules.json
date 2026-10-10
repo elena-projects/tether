@@ -3,9 +3,10 @@
     "emotionSpaces": {
       "$emotion": {
         "notes": {
+          ".indexOn": ["timestamp"],
           ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
           "$id": {
-            ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && !data.exists() && newData.exists() && ($emotion == 'anxious' || $emotion == 'sad' || $emotion == 'lonely' || $emotion == 'tired' || $emotion == 'numb' || $emotion == 'calm')",
+            ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && ($emotion == 'anxious' || $emotion == 'sad' || $emotion == 'lonely' || $emotion == 'tired' || $emotion == 'numb' || $emotion == 'calm')",
             ".validate": "newData.hasChildren(['text', 'timestamp'])",
             "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 300" },
             "timestamp": { ".validate": "newData.isNumber() && newData.val() <= now + 10000" },
@@ -31,30 +32,28 @@
       }
     },
     "messages": {
-      ".read": true,
+      ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
+      ".indexOn": ["targetId"],
       "$id": {
-        ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && !data.exists() && newData.exists()",
-        ".validate": "newData.hasChildren(['text','timestamp']) && newData.child('text').isString() && newData.child('text').val().length <= 300",
-        "voteCount": {
-          ".write": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1 && newData.val() >= (data.exists() ? data.val() : 0) - 1"
-        }
+        ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
+        ".validate": "newData.hasChildren(['text','timestamp','targetId','voteCount']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 300 && newData.child('targetId').val() == 'wall' && newData.child('voteCount').isNumber() && newData.child('voteCount').val() >= 0"
       }
     },
     "history": { ".read": false, ".write": false },
     "feedback": {
       "$box": {
-        ".read": true,
+        ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
         "$id": {
-          ".write": true,
+          ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
           ".validate": "newData.hasChildren(['text','ts']) && newData.child('text').isString() && newData.child('text').val().length <= 600"
         }
       }
     },
     "talks": {
       "$box": {
-        ".read": true,
+        ".read": false,
         "$talk": {
-          ".write": true,
+          ".write": false,
           ".validate": "newData.hasChildren(['fromId','toId','status','createdAt'])",
           "wallMsgText": { ".validate": "newData.isString() && newData.val().length <= 300" },
           "turns": { "$i": { "text": { ".validate": "newData.isString() && newData.val().length <= 400" } } }

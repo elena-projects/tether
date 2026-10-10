@@ -25,14 +25,14 @@ const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, loading, langu
 
   return (
     <div className="modal-overlay viewport-overlay fixed inset-0 z-[65] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }} className="modal-panel w-full max-w-lg max-h-[88vh] overflow-hidden rounded-3xl shadow-2xl text-white flex flex-col">
+      <div role="dialog" aria-modal="true" aria-labelledby="wall-title" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }} className="modal-panel w-full max-w-lg max-h-[88vh] overflow-hidden rounded-3xl shadow-2xl text-white flex flex-col">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
           <Sparkles size={16} className="text-teal-300" />
           <div>
-            <h2 className="font-bold">{zh ? '大家的暖心话' : 'Wall of kind words'}</h2>
+            <h2 id="wall-title" className="font-bold">{zh ? '大家的暖心话' : 'Wall of kind words'}</h2>
             <p className="text-[11px] opacity-50">{zh ? '每个人写给彼此的一点光' : 'little lights people wrote for each other'}</p>
           </div>
-          <button onClick={onClose} className="ml-auto p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"><X size={18} /></button>
+          <button onClick={onClose} aria-label={zh ? '关闭暖心墙' : 'Close kind words'} className="ml-auto p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"><X size={18} /></button>
         </div>
 
         <div className="overflow-y-auto no-scrollbar p-5 space-y-3">

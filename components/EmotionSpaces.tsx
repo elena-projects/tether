@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Heart, Loader2, PenLine, RefreshCw, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, Heart, Loader2, PenLine, RefreshCw, Send } from 'lucide-react';
 import { Language, TetherState } from '../types';
-import { EMOTION_SPACES, EmotionId, EmotionNote, SpaceError, readSpace, leaveNote, encourageNote } from '../services/emotionSpaces';
+import { EMOTION_SPACES, EmotionId, EmotionNote, SpaceError, readSpace, leaveNote, encourageNote, reportNote } from '../services/emotionSpaces';
 
 interface Props { language: Language; state: TetherState; onAdjust: () => void; onRest: () => void; onNeedHelp: () => void; }
 
@@ -33,6 +33,9 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
   const [replySending, setReplySending] = useState(false);
   const [replyError, setReplyError] = useState('');
   const [replied, setReplied] = useState<Set<string>>(new Set());
+  const [reported, setReported] = useState<Set<string>>(new Set());
+  const [reporting, setReporting] = useState<string | null>(null);
+  const [reportError, setReportError] = useState<{ id: string; message: string } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const alive = useRef(true);
   const writeLock = useRef(false);
@@ -74,6 +77,18 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
     } catch (e) { if (alive.current) setReplyError(errorCopy(e, zh)); }
     finally { replyLock.current = false; if (alive.current) setReplySending(false); }
   };
+  const report = async (id: string) => {
+    if (reporting || reported.has(id)) return;
+    setReporting(id); setReportError(null);
+    try {
+      await reportNote(emotion, id);
+      if (alive.current) setReported(previous => new Set([...previous, id]));
+    } catch (e) {
+      if (alive.current) setReportError({ id, message: errorCopy(e, zh) });
+    } finally {
+      if (alive.current) setReporting(null);
+    }
+  };
   return <section className="emotion-room" style={{ '--space-color': space.color } as React.CSSProperties}>
     <button className="space-back" onClick={onBack} disabled={sending || replySending}><ArrowLeft size={16} />{zh ? '换一个空间' : 'Other spaces'}</button>
     <header className="space-heading"><span className="space-swatch" /><h2>{space.label[language]}</h2><p>{space.hint[language]}</p></header>
@@ -97,7 +112,8 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
       {!loading && !loadError && !notes.length && <p className="space-quiet">{zh ? '这里还没有人留下话。你可以静静待一会儿，也可以写下第一句。' : 'No words have been left here yet. You can stay quietly, or leave the first note.'}</p>}
       {notes.map(note => <article className="space-note" key={note.id}>
         <p className="space-note-text">{note.text}</p>
-        <div className="space-note-meta"><time dateTime={new Date(note.timestamp).toISOString()}>{new Date(note.timestamp).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</time><button disabled={replied.has(note.id) || replySending} onClick={() => { setReplyNote(replyNote === note.id ? null : note.id); setReplyChoice(null); setReplyError(''); }}><Heart size={15} />{replied.has(note.id) ? (zh ? '心意已留下' : 'Kindness sent') : (zh ? '留一点鼓励' : 'Leave encouragement')}</button></div>
+        <div className="space-note-meta"><time dateTime={new Date(note.timestamp).toISOString()}>{new Date(note.timestamp).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</time><span><button disabled={reported.has(note.id) || reporting === note.id} onClick={() => void report(note.id)}><Flag size={14} />{reported.has(note.id) ? (zh ? '已举报' : 'Reported') : reporting === note.id ? (zh ? '正在提交' : 'Reporting') : (zh ? '举报' : 'Report')}</button><button disabled={replied.has(note.id) || replySending} onClick={() => { setReplyNote(replyNote === note.id ? null : note.id); setReplyChoice(null); setReplyError(''); }}><Heart size={15} />{replied.has(note.id) ? (zh ? '心意已留下' : 'Kindness sent') : (zh ? '留一点鼓励' : 'Leave encouragement')}</button></span></div>
+        {reportError?.id === note.id && <p role="alert" className="space-error">{reportError.message}</p>}
         {space.encouragements.map((message, i) => note.encouragements[`c${i}`] > 0 && <p className="space-encouragement" key={i}><Heart size={13} /><span>{message[language]}</span><span>{note.encouragements[`c${i}`]}</span></p>)}
         {replyNote === note.id && <fieldset className="space-reply" disabled={replySending}><legend>{zh ? '选一句你想对 TA 说的话' : 'Choose what you would like to say'}</legend>{space.encouragements.map((message, i) => <label key={i}><input type="radio" name={`reply-${note.id}`} value={i} checked={replyChoice === i} onChange={() => setReplyChoice(i)} /><span>{message[language]}</span></label>)}{replyError && <p role="alert" className="space-error">{replyError}</p>}<button className="space-primary" disabled={replyChoice === null || replySending} onClick={() => void reply(note.id)}>{replySending ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} />}{zh ? '送出这句话' : 'Send these words'}</button></fieldset>}
       </article>)}

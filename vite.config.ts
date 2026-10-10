@@ -4,39 +4,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
-    // SECURITY: never bake the Gemini key into the production bundle — it would be
-    // publicly readable in the browser. In prod the key is injected server-side by
-    // nginx (see nginx.conf / Dockerfile). In local dev we keep it so the vite proxy works.
-    const geminiKey = mode === 'production' ? '' : (env.GEMINI_API_KEY || env.API_KEY || '');
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
         // Dev mirror of the prod nginx same-origin proxies.
         proxy: {
-          // Must come before the generic '/rtdb' entry — the mood index lives behind a
-          // secret segment in production, and dev has to match.
-          '/rtdb/users': {
-            target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
-            changeOrigin: true,
-            secure: true,
-            rewrite: (p: string) => p.replace(/^\/rtdb\/users/, `/users/${env.DATA_SECRET || 'dev'}`),
-          },
-          '/rtdb': {
-            target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
-            changeOrigin: true,
-            secure: true,
-            rewrite: (p: string) => p.replace(/^\/rtdb/, ''),
-          },
-          // Mirrors the production nginx rule: private talks sit under a secret box.
-          // Locally that box is TALKS_SECRET from .env.local, falling back to a "dev"
-          // box so development never touches real users' messages.
-          '/talks': {
-            target: 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app',
-            changeOrigin: true,
-            secure: true,
-            rewrite: (p: string) => p.replace(/^\/talks/, `/talks/${env.TALKS_SECRET || 'dev'}`),
-          },
           '/api/wall': {
             target: 'https://elenaprojects.cc',
             changeOrigin: true,
@@ -51,6 +24,12 @@ export default defineConfig(({ mode }) => {
             secure: true,
             headers: { 'x-tether-proxy': env.WALL_PROXY_SECRET || 'dev' },
           },
+          '/api/companion': {
+            target: 'https://elenaprojects.cc',
+            changeOrigin: true,
+            secure: true,
+            headers: { 'x-tether-proxy': env.WALL_PROXY_SECRET || 'dev' },
+          },
           '/api/state': {
             target: 'https://elenaprojects.cc',
             changeOrigin: true,
@@ -59,17 +38,10 @@ export default defineConfig(({ mode }) => {
               'x-tether-proxy': env.WALL_PROXY_SECRET || 'dev',
             },
           },
-          '/v1beta': {
-            target: 'https://generativelanguage.googleapis.com',
-            changeOrigin: true,
-            secure: true,
-          },
         },
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(geminiKey),
-        'process.env.GEMINI_API_KEY': JSON.stringify(geminiKey),
         // Firebase config isn't provisioned in production; define the keys as empty so the
         // production build doesn't reference a bare `process` (which would crash the app).
         // firebase.ts falls back to placeholders and the app runs on its demo/local data.
@@ -89,7 +61,6 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               react: ['react', 'react-dom'],
-              genai: ['@google/genai'],
               d3: ['d3'],
               icons: ['lucide-react'],
             },

@@ -1,10 +1,8 @@
 #!/bin/sh
 # Deploy Tether to Cloud Run.
 #
-# No key is passed in: the service already holds GEMINI_API_KEY and TALKS_SECRET, and
-# `--update-env-vars` is the only flag that would touch them, so leaving env alone keeps
-# both intact. Passing GEMINI_API_KEY without TALKS_SECRET is safe for the same reason,
-# but not needing either is safer still.
+# Tether only needs the private Portfolio proxy secret. Gemini runs in the Portfolio
+# backend, and the paused Talks feature no longer has a database proxy.
 set -e
 cd "$(dirname "$0")"
 
@@ -18,7 +16,7 @@ fi
 
 npm run build
 
-# The bundle must never carry the key — nginx injects it server-side at runtime.
+# The bundle must never carry an API key.
 if grep -rqE 'AQ\.[A-Za-z0-9_-]{20,}|AIza[A-Za-z0-9_-]{30,}' dist/assets/ 2>/dev/null; then
   echo "ABORT: an API key ended up in dist/ — do not deploy this build." >&2
   exit 1
@@ -31,7 +29,7 @@ gcloud run deploy tether \
   --platform=managed \
   --allow-unauthenticated \
   --service-account=tether-runtime@m-gemini-1127.iam.gserviceaccount.com \
-  --remove-env-vars=DATA_SECRET \
+  --remove-env-vars=DATA_SECRET,GEMINI_API_KEY,TALKS_SECRET \
   --clear-volumes \
   --clear-volume-mounts \
   --port=8080

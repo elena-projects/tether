@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TetherState, TetherRole, Message, Language, UserProfile } from './types';
-import { generateFallbackMessage } from './services/geminiService';
-import { saveUserSession, loadUserSession, establishUserSession, clearUserSessionToken, updateUserState, getDriftingUsers, sendTetherMessage, listenToInbox, voteForMessage, unvoteForMessage, listenToSpotlight, listenToUserTotalVotes, listenToWall } from './services/firebase';
+import { saveUserSession, loadUserSession, establishUserSession, clearUserSessionToken, getDriftingUsers, sendTetherMessage, voteForMessage, unvoteForMessage, listenToWall } from './services/firebase';
 import { startHealingDrone, stopHealingDrone, unlockAudio } from './services/audioService';
 import { vibrate, stopVibration } from './services/haptics';
 import { getTranslation, streamMessages, aiFallbackMessages } from './translations';
@@ -17,12 +16,9 @@ import { MessageCard } from './components/MessageCard';
 import WelcomeBack from './components/WelcomeBack';
 import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
-import ConfideCompose from './components/ConfideCompose';
-import TalksPanel from './components/TalksPanel';
-import { listenToTalks, myTalks, Talk, TALKS_ENABLED } from './services/talks';
 import FeedbackWidget from './components/FeedbackWidget';
 import EmotionSpaces from './components/EmotionSpaces';
-import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy, MessageCircle } from 'lucide-react';
+import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
   valence: 50,
@@ -69,9 +65,6 @@ export default function App() {
   const [showSafety, setShowSafety] = useState(false);   // crisis-support screen
   const [showKit, setShowKit] = useState(false);         // reset kit + emotion journal
   const [showWall, setShowWall] = useState(false);       // always-on "kind words" wall
-  const [showTalks, setShowTalks] = useState(false);     // bounded one-to-one exchanges
-  const [talks, setTalks] = useState<Talk[]>([]);
-  const [confideTo, setConfideTo] = useState<Message | null>(null);   // wall message being answered
   // Post-login flow: 'welcome' (a calm "remember you" screen) → 'main' (the dashboard).
   const [phase, setPhase] = useState<'welcome' | 'main'>('welcome');
   // Within the main phase, a gentle 3-step ritual instead of one dense dashboard.
@@ -158,9 +151,6 @@ export default function App() {
   const [demoStream, setDemoStream] = useState<Message[]>(streamMessages['en']);
   const t = getTranslation(language);
   const zh = language === 'zh';
-  // Requests still waiting on my answer — the only thing worth a badge.
-  const pendingTalks = talks.filter((t) => t.status === 'pending' && t.toId === currentUser?.uid).length;
-  const refreshTalks = async () => { if (currentUser) setTalks(await myTalks(currentUser.uid)); };
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -280,47 +270,10 @@ export default function App() {
     appendJournal({ id: Date.now(), timestamp: Date.now(), valence: state.valence, arousal: state.arousal, message: word });
   }, [phase, hasInteracted, state, zh]);
 
-  // --- LISTENERS ---
   useEffect(() => {
-    if (!currentUser) return;
-    
-    // Requests and replies in the bounded one-to-one channel.
-    // Paused — see TALKS_ENABLED. This poll is what was downloading everyone's messages.
-    const unsubTalks = TALKS_ENABLED ? listenToTalks(currentUser.uid, setTalks) : () => {};
-
-    // Listen for messages targeted specifically to this user (targetId == currentUser.uid)
-    const unsubInbox = listenToInbox(currentUser.uid, (msgs) => {
-      setInbox(msgs);
-      // If a real message arrives, clear local fallback to avoid duplicates or confusion
-      if (msgs.length > 0) {
-         setLocalAiMessage(null);
-      }
-    });
-
-    const unsubSpotlight = listenToSpotlight((msg) => {
-      setSpotlightMessage(msg);
-    });
-
-    const unsubHealing = listenToUserTotalVotes(currentUser.uid, (total) => {
-       setUserHealingScore(prev => {
-          if (total > prev && !showHistory) {
-             setHasNewHealing(true);
-          }
-          return total;
-       });
-    });
-
-    return () => {
-      unsubInbox(); unsubTalks();
-      unsubSpotlight();
-      unsubHealing();
-    };
-  }, [currentUser, showHistory]);
-
-  useEffect(() => {
-    if (showLanding) return;
+    if (showLanding || !showWall) return;
     return listenToWall((msgs) => { setWallMessages(msgs); setWallLoaded(true); });
-  }, [showLanding]);
+  }, [showLanding, showWall]);
 
   // Clear notification when history opens
   useEffect(() => {
@@ -566,28 +519,6 @@ export default function App() {
           language={language}
           onClose={() => setShowWall(false)}
           myUid={currentUser?.uid}
-          onConfide={TALKS_ENABLED && currentUser ? (msg) => { setShowWall(false); setConfideTo(msg); } : undefined}
-        />
-      )}
-
-      {confideTo && currentUser && (
-        <ConfideCompose
-          message={confideTo}
-          me={currentUser}
-          language={language}
-          onClose={() => { setConfideTo(null); refreshTalks(); }}
-          onNeedHelp={() => { setConfideTo(null); setShowSafety(true); }}
-        />
-      )}
-
-      {showTalks && currentUser && (
-        <TalksPanel
-          talks={talks}
-          me={currentUser}
-          language={language}
-          onClose={() => setShowTalks(false)}
-          onChanged={refreshTalks}
-          onNeedHelp={() => { setShowTalks(false); setShowSafety(true); }}
         />
       )}
 
@@ -640,16 +571,6 @@ export default function App() {
                  <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'} aria-label={zh ? '大家的暖心话' : 'Wall of kind words'}>
                     <Sparkles size={18} />
                  </button>
-
-                 {TALKS_ENABLED && (
-                 <button onClick={() => setShowTalks(true)} className="relative opacity-70 hover:opacity-100 transition-opacity" title={zh ? '说说话' : 'Talking'}>
-                    <MessageCircle size={18} />
-                    {pendingTalks > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
-                            style={{ background: 'var(--rose)', color: 'var(--bg-base)' }}>{pendingTalks}</span>
-                    )}
-                 </button>
-                 )}
 
                  <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-80 hover:opacity-100' : 'opacity-60 hover:opacity-90'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-label={soundOn ? (zh ? '关闭疗愈音' : 'Turn sound off') : (zh ? '开启疗愈音' : 'Turn sound on')} aria-pressed={soundOn}>
                     {soundOn ? <Volume2 size={18} /> : <VolumeX size={18} />}

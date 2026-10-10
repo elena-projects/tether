@@ -51,7 +51,8 @@ Reason:
 
 - The public Talks entry was removed and redirects to `/`.
 - The old `allTalks()` implementation downloaded the entire secret node to clients.
-- nginx returns `403` for `/talks/` while the feature is paused.
+- nginx and Firebase rules return `403` for Talks while the feature is paused. No
+  Talks database secret or proxy remains in the Tether container.
 
 Before re-enabling Tether Talks:
 
@@ -74,7 +75,8 @@ as the Portfolio project's `api/wall.js` before deploying Tether or its database
 The Portfolio deployment must provide `WALL_PROXY_SECRET`, `GEMINI_API_KEY`,
 `FIREBASE_API_KEY`, `WALL_FIREBASE_EMAIL`, and `WALL_FIREBASE_PASSWORD`. The
 Tether Cloud Run service must provide the same `WALL_PROXY_SECRET` value. Firebase
-rules restrict message creation to the dedicated service user's UID.
+rules restrict message reads and writes to the dedicated service user's UID; the wall
+API returns bounded public records without sender or targeting identifiers.
 
 Do not restore direct browser creation under the Firebase `messages` node. Client-side
 checks are useful for immediate feedback, but they are not a security boundary.
@@ -116,17 +118,21 @@ Firebase Realtime Database uses secret-scoped server paths for private data:
 
 - The anonymous mood index is stored under `users/<DATA_SECRET>` and written only by
   the server-side state endpoint.
-- Private feedback is stored under `feedback/<INBOX_SECRET>`.
-- Paused one-to-one messages are stored under `talks/<TALKS_SECRET>`.
-- The public wall is readable, but new messages are created only by the moderated server endpoint.
+- Private feedback is stored under `feedback/<INBOX_SECRET>` and is accessible only to
+  the dedicated backend Firebase user.
+- Paused one-to-one data is fully denied by Firebase rules.
+- Public wall records are available only through the bounded backend endpoint.
+- AI comfort and screening use the fixed-action `/api/companion` endpoint. Never add a
+  generic Gemini proxy or a browser-visible Gemini key.
 
 Cloud Run nginx rate limiting is keyed on the last IP in `X-Forwarded-For`, which is
-appended by Google Front End. Keep the Gemini, wall, and state limits in separate zones.
+appended by Google Front End. Keep the companion, wall, and state limits in separate zones.
 
 The Cloud Run service runs as
 `tether-runtime@m-gemini-1127.iam.gserviceaccount.com`, which intentionally has no
 project IAM roles. Do not switch it back to the default Compute service account. The
 old AI Studio GCS volume is obsolete and must remain removed.
 
-The Gemini API key is shared by Feynman AI, CogniCard, and Tether. Do not delete or
-rotate it without updating all three Cloud Run services.
+The Gemini API key remains shared by Feynman AI, CogniCard, and the Portfolio backend.
+Tether itself no longer stores it. Do not delete or rotate it without updating every
+service that still uses it.

@@ -8,7 +8,7 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 # part of the server template. The 00- prefix makes nginx read it before default.conf,
 # which refers to the zone.
 COPY ratelimit.conf /etc/nginx/conf.d/00-ratelimit.conf
-ENV NGINX_ENVSUBST_FILTER=(GEMINI_API_KEY|TALKS_SECRET|WALL_PROXY_SECRET)
+ENV NGINX_ENVSUBST_FILTER=(WALL_PROXY_SECRET)
 COPY dist /usr/share/nginx/html
 EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

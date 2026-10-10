@@ -29,6 +29,10 @@ also remain anonymous when a visitor uses an optional local nickname.
   of network-level anonymity.
 - Direct client reads/writes of the new database node are denied. Only the dedicated
   backend Firebase user can access it, through the bounded API.
+- Readers can report a note without supplying free-form report text. The backend
+  retrieves the stored note and sends a fixed-format report to the private inbox.
+- Notes expire after 90 days. Each room read performs a bounded cleanup of up to 50
+  expired notes, so retention does not require a permanently running worker.
 
 ## Deployment
 
@@ -67,7 +71,7 @@ cleanup check. The disposable verification note was deleted and confirmed absent
 Tether revision `tether-00085-q5q` is serving 100% of Cloud Run traffic. The previous
 stable rollback revision is `tether-00084-mp7`.
 
-Seven handler tests, TypeScript checking, and the production build pass. Browser
+Ten handler tests, TypeScript checking, and the production build pass. Browser
 fixtures verified reading, publishing, encouragement, failure preservation, and
 room isolation. Layout checks covered 320x568, 390x844, 667x375, 768x1024, and
 1440x900 without horizontal overflow. Production UI checks also verified optional-name

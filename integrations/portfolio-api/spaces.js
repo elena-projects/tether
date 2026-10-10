@@ -3,6 +3,7 @@ import { EMOTION_SPACES, isEmotionSpace } from '../shared/emotion-spaces.js';
 const RTDB = 'https://tether-7fc38-default-rtdb.asia-southeast1.firebasedatabase.app';
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const NOTE_ID = /^[-_a-zA-Z0-9]{20}$/;
+const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 let session = { token: '', expires: 0 };
 
 async function storeToken() {
@@ -47,12 +48,13 @@ export default async function handler(req, res) {
   catch { return res.status(400).json({ error: 'bad_json' }); }
   if (!body || !isEmotionSpace(body.emotion)) return res.status(400).json({ error: 'emotion' });
   const emotion = body.emotion;
-  if (req.method === 'POST' && !['note', 'encourage'].includes(body.action)) return res.status(400).json({ error: 'action' });
+  if (req.method === 'POST' && !['note', 'encourage', 'report'].includes(body.action)) return res.status(400).json({ error: 'action' });
   const cursor = body.cursor;
   if (req.method === 'GET' && cursor != null && !NOTE_ID.test(cursor)) return res.status(400).json({ error: 'cursor' });
   const text = typeof body.text === 'string' ? body.text.trim() : '';
   if (body.action === 'note' && (text.length < 1 || text.length > 300)) return res.status(400).json({ error: 'length' });
   if (body.action === 'encourage' && (!NOTE_ID.test(body.id) || !Number.isInteger(body.choice) || body.choice < 0 || body.choice >= EMOTION_SPACES[emotion].encouragements.length)) return res.status(400).json({ error: 'encouragement' });
+  if (body.action === 'report' && !NOTE_ID.test(body.id)) return res.status(400).json({ error: 'report' });
   const language = body.language === 'en' ? 'en' : 'zh';
   try {
     if (req.method === 'POST' && body.action === 'note') {
@@ -65,6 +67,13 @@ export default async function handler(req, res) {
     const base = `${RTDB}/emotionSpaces/${emotion}/notes`;
     const store = (suffix, options = {}) => fetch(`${base}${suffix}${suffix.includes('?') ? '&' : '?'}auth=${encodeURIComponent(token)}`, { ...options, signal: AbortSignal.timeout(8000) });
     if (req.method === 'GET') {
+      const expiredQuery = new URLSearchParams({ orderBy: '"timestamp"', endAt: String(Date.now() - RETENTION_MS), limitToFirst: '50' });
+      const expiredResponse = await store(`.json?${expiredQuery}`);
+      if (expiredResponse.ok) {
+        const expired = await expiredResponse.json() || {};
+        const removals = Object.fromEntries(Object.keys(expired).filter(id => NOTE_ID.test(id)).map(id => [id, null]));
+        if (Object.keys(removals).length) await store('.json', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(removals) });
+      }
       const query = new URLSearchParams({ orderBy: '"$key"', limitToLast: '21', ...(cursor ? { endAt: JSON.stringify(cursor) } : {}) });
       const response = await store(`.json?${query}`);
       if (!response.ok) throw new Error('store');
@@ -79,6 +88,22 @@ export default async function handler(req, res) {
       if (!response.ok) throw new Error('store');
       const data = await response.json();
       return res.status(200).json({ note: { id: data.name, ...entry, encouragements: {} } });
+    }
+    if (body.action === 'report') {
+      if (!process.env.INBOX_SECRET) return res.status(500).json({ error: 'not_configured' });
+      const noteResponse = await store(`/${body.id}.json`);
+      if (!noteResponse.ok) throw new Error('store');
+      const note = await noteResponse.json();
+      if (!note) return res.status(404).json({ error: 'not_found' });
+      const report = {
+        text: `Reported Tether emotion note\nRoom: ${emotion}\nNote ID: ${body.id}\nText: ${String(note.text || '').slice(0, 300)}`,
+        name: 'Anonymous report', tool: 'report', ts: Date.now(),
+      };
+      const reportResponse = await fetch(`${RTDB}/feedback/${encodeURIComponent(process.env.INBOX_SECRET)}.json?auth=${encodeURIComponent(token)}`, {
+        method: 'POST', signal: AbortSignal.timeout(8000), headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report),
+      });
+      if (!reportResponse.ok) throw new Error('store');
+      return res.status(200).json({ ok: true });
     }
     const exists = await store(`/${body.id}/timestamp.json`);
     if (!exists.ok) throw new Error('store');

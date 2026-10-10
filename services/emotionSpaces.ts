@@ -31,3 +31,6 @@ export function leaveNote(emotion: EmotionId, text: string, language: string): P
 export function encourageNote(emotion: EmotionId, id: string, choice: number): Promise<{ choice: number; count: number }> {
   return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'encourage', emotion, id, choice }) });
 }
+export function reportNote(emotion: EmotionId, id: string): Promise<{ ok: boolean }> {
+  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id }) });
+}
