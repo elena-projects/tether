@@ -69,8 +69,8 @@ identical to its previously live content.
 Firebase rules were published with `elena@geminiat.work`. The production backend
 passed a real read, moderated anonymous write, preset encouragement, read-back, and
 cleanup check. The disposable verification note was deleted and confirmed absent.
-Tether revision `tether-00086-lvv` is serving 100% of Cloud Run traffic. The previous
-stable rollback revision is `tether-00085-q5q`.
+Tether revision `tether-00087-ttf` is serving 100% of Cloud Run traffic. The previous
+stable rollback revision is `tether-00086-lvv`.
 
 Ten handler tests, TypeScript checking, and the production build pass. Browser
 fixtures verified reading, publishing, encouragement, failure preservation, and
@@ -85,3 +85,8 @@ Security hardening is recorded in Tether commit `5a40545` and Portfolio commit
 `f07c3df`. Generic Gemini and Firebase proxies are retired; public data is served only
 through bounded APIs, fixed-action AI runs only in the Portfolio backend, reports reach
 the private inbox, and room notes use a 90-day lazy retention policy.
+
+Follow-up commit `3968e10` removes inline-script permission from the production CSP and
+pins Cloud Run to at most three instances. Nine retired targeted messages and three
+Talks records were exported to an AES-256 encrypted local backup and removed from
+Firebase; the 31 public wall records were preserved and verified through the live API.

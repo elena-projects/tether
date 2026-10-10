@@ -131,7 +131,9 @@ appended by Google Front End. Keep the companion, wall, and state limits in sepa
 The Cloud Run service runs as
 `tether-runtime@m-gemini-1127.iam.gserviceaccount.com`, which intentionally has no
 project IAM roles. Do not switch it back to the default Compute service account. The
-old AI Studio GCS volume is obsolete and must remain removed.
+old AI Studio GCS volume is obsolete and must remain removed. Keep the deployment cap
+at three instances so a distributed request spike cannot multiply per-instance limits
+without bound.
 
 The Gemini API key remains shared by Feynman AI, CogniCard, and the Portfolio backend.
 Tether itself no longer stores it. Do not delete or rotate it without updating every
