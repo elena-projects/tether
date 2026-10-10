@@ -61,20 +61,27 @@ return to reading, and switch rooms. The fixture HTML must be removed before dep
 
 ## Release status (2026-10-10)
 
-The Portfolio backend was deployed as `portfolio-mm1a5lm5v-elenazheng.vercel.app`
-and aliased to `elenaprojects.cc`. Unauthenticated requests return 403. The deployed
-Portfolio homepage was verified identical to its previously live content.
+The hardened Portfolio backend was deployed as
+`portfolio-ncfi2bfwl-elenazheng.vercel.app` and aliased to `elenaprojects.cc`.
+Unauthenticated requests return 403. The deployed Portfolio homepage was verified
+identical to its previously live content.
 
 Firebase rules were published with `elena@geminiat.work`. The production backend
 passed a real read, moderated anonymous write, preset encouragement, read-back, and
 cleanup check. The disposable verification note was deleted and confirmed absent.
-Tether revision `tether-00085-q5q` is serving 100% of Cloud Run traffic. The previous
-stable rollback revision is `tether-00084-mp7`.
+Tether revision `tether-00086-lvv` is serving 100% of Cloud Run traffic. The previous
+stable rollback revision is `tether-00085-q5q`.
 
 Ten handler tests, TypeScript checking, and the production build pass. Browser
 fixtures verified reading, publishing, encouragement, failure preservation, and
 room isolation. Layout checks covered 320x568, 390x844, 667x375, 768x1024, and
 1440x900 without horizontal overflow. Production UI checks also verified optional-name
 entry, all six emotion choices, room reading, and a 390x844 mobile viewport with no
-horizontal overflow. Direct calls to the private Portfolio endpoint return 403 while
-the same-origin Tether proxy returns 200.
+horizontal overflow. A post-release 390x844 and 1440x900 browser smoke check found no
+horizontal overflow or console errors. Direct calls to the private Portfolio endpoint
+return 403 while the same-origin Tether proxy returns 200.
+
+Security hardening is recorded in Tether commit `5a40545` and Portfolio commit
+`f07c3df`. Generic Gemini and Firebase proxies are retired; public data is served only
+through bounded APIs, fixed-action AI runs only in the Portfolio backend, reports reach
+the private inbox, and room notes use a 90-day lazy retention policy.
