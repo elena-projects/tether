@@ -29,6 +29,7 @@ gcloud run deploy tether \
   --platform=managed \
   --allow-unauthenticated \
   --service-account=tether-runtime@m-gemini-1127.iam.gserviceaccount.com \
+  --max-instances=3 \
   --remove-env-vars=DATA_SECRET,GEMINI_API_KEY,TALKS_SECRET \
   --clear-volumes \
   --clear-volume-mounts \
