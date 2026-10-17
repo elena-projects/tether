@@ -72,6 +72,27 @@ UI checks use disposable in-memory fixtures, never fake public users: enter with
 nickname, choose a room, read, encourage, write, preserve text after a failed review,
 return to reading, and switch rooms. The fixture HTML must be removed before deploy.
 
+## Release status (2026-10-17)
+
+Anonymous free-form replies were deployed in Tether commits `46412b8` and `4e8af85`,
+with Portfolio backend commit `bd9cd21`. Vercel deployment
+`portfolio-5hrs6a8q3-elenazheng.vercel.app` is aliased to `elenaprojects.cc`, and Cloud
+Run revision `tether-00089-lf4` serves 100% of Tether traffic. Firebase rules were
+published with `elena@geminiat.work` before the client rollout.
+
+Fourteen handler tests, TypeScript checking, the production build, diff checks, and a
+production dependency audit pass. Local fixture checks at 390x844 and 1440x900 had no
+horizontal overflow or console errors. The production 390x844 smoke check also had no
+overflow or console errors. Live checks confirmed bounded room reads return 200,
+direct Portfolio access returns 403, direct Firebase comment reads return 401,
+non-JSON writes return 415, obvious abuse returns 422, and a missing parent returns
+404 without publishing anything.
+
+The first rollout revision, `tether-00088-k6p`, exposed a proxy regression that
+dropped GET query parameters. The live smoke test caught it immediately; revision
+`tether-00089-lf4` preserves `$request_uri` and is the corrected production release.
+Do not use `tether-00088-k6p` as a rollback target.
+
 ## Release status (2026-10-10)
 
 The hardened Portfolio backend was deployed as
