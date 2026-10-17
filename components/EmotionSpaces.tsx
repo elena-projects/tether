@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, Heart, Loader2, PenLine, RefreshCw, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Check, Flag, Heart, Loader2, MessageCircle, PenLine, RefreshCw, Send } from 'lucide-react';
 import { Language, TetherState } from '../types';
-import { EMOTION_SPACES, EmotionId, EmotionNote, SpaceError, readSpace, leaveNote, encourageNote, reportNote } from '../services/emotionSpaces';
+import { EMOTION_SPACES, EmotionComment, EmotionId, EmotionNote, SpaceError, readSpace, readComments, leaveNote, leaveComment, encourageNote, reportNote, reportComment } from '../services/emotionSpaces';
 
 interface Props { language: Language; state: TetherState; onAdjust: () => void; onRest: () => void; onNeedHelp: () => void; }
 
@@ -9,6 +9,7 @@ function errorCopy(error: unknown, zh: boolean) {
   if (error instanceof SpaceError) {
     if (error.needsSupport) return zh ? '这句话没有公开。你现在的感受值得被认真照顾，可以先看看能马上联系的人。' : 'This was not published. What you are feeling deserves care. You can reach someone who can help now.';
     if (error.code === 'blocked') return zh ? '这句话暂时不能公开。可以留下自己的感受，请避开攻击、个人信息或危险细节。' : 'This cannot be shared publicly. Your feelings are welcome; please leave out attacks, personal information, or dangerous details.';
+    if (error.code === 'full') return zh ? '这条留言的回应已经满了，你仍然可以送一句预设鼓励。' : 'This note has reached its reply limit. You can still send a preset encouragement.';
     if (error.code === 'unverifiable') return zh ? '暂时无法完成审核，还没有发布。文字已保留在输入框中。' : 'The review is unavailable. Nothing was published; your words are still here.';
     if (error.code === 'rate_limit') return zh ? '稍微等一会儿，再试一次。' : 'Please wait a moment and try again.';
     if (error.code === 'not_found') return zh ? '这句话已经不在这里了，可以刷新看看。' : 'That note is no longer here. Try refreshing.';
@@ -36,10 +37,22 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
   const [reported, setReported] = useState<Set<string>>(new Set());
   const [reporting, setReporting] = useState<string | null>(null);
   const [reportError, setReportError] = useState<{ id: string; message: string } | null>(null);
+  const [commentNote, setCommentNote] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, EmotionComment[]>>({});
+  const [commentText, setCommentText] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentError, setCommentError] = useState('');
+  const [commentSupport, setCommentSupport] = useState(false);
+  const [reportedComments, setReportedComments] = useState<Set<string>>(new Set());
+  const [reportingComment, setReportingComment] = useState<string | null>(null);
+  const [commentReportError, setCommentReportError] = useState<{ id: string; message: string } | null>(null);
   const abort = useRef<AbortController | null>(null);
+  const commentAbort = useRef<AbortController | null>(null);
   const alive = useRef(true);
   const writeLock = useRef(false);
   const replyLock = useRef(false);
+  const commentLock = useRef(false);
   const load = async (older = false) => {
     abort.current?.abort();
     const controller = new AbortController();
@@ -53,7 +66,7 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
     } catch (e) { if (!controller.signal.aborted) setLoadError(errorCopy(e, zh)); }
     finally { if (!controller.signal.aborted) setLoading(false); }
   };
-  useEffect(() => { alive.current = true; return () => { alive.current = false; abort.current?.abort(); }; }, []);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; abort.current?.abort(); commentAbort.current?.abort(); }; }, []);
   useEffect(() => { if (mode === 'read') void load(); }, [mode]);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -89,12 +102,49 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
       if (alive.current) setReporting(null);
     }
   };
+  const openComments = async (id: string) => {
+    if (commentNote === id) { setCommentNote(null); setCommentText(''); setCommentError(''); setCommentSupport(false); return; }
+    setCommentNote(id); setCommentText(''); setCommentError(''); setCommentSupport(false);
+    if (comments[id]) return;
+    commentAbort.current?.abort();
+    const controller = new AbortController();
+    commentAbort.current = controller; setCommentLoading(true);
+    try {
+      const data = await readComments(emotion, id, controller.signal);
+      if (!controller.signal.aborted && alive.current) setComments(previous => ({ ...previous, [id]: data.comments }));
+    } catch (e) { if (!controller.signal.aborted && alive.current) setCommentError(errorCopy(e, zh)); }
+    finally { if (!controller.signal.aborted && alive.current) setCommentLoading(false); }
+  };
+  const submitComment = async (event: React.FormEvent, id: string) => {
+    event.preventDefault();
+    if (commentLock.current || !commentText.trim()) return;
+    commentLock.current = true; setCommentSending(true); setCommentError(''); setCommentSupport(false);
+    try {
+      const result = await leaveComment(emotion, id, commentText.trim(), language);
+      if (!alive.current) return;
+      setComments(previous => ({ ...previous, [id]: [...(previous[id] || []), result.comment].slice(-12) }));
+      setCommentText('');
+    } catch (e) {
+      if (alive.current) { setCommentError(errorCopy(e, zh)); setCommentSupport(e instanceof SpaceError && e.needsSupport); }
+    } finally { commentLock.current = false; if (alive.current) setCommentSending(false); }
+  };
+  const reportAComment = async (noteId: string, commentId: string) => {
+    const key = `${noteId}:${commentId}`;
+    if (reportingComment || reportedComments.has(key)) return;
+    setReportingComment(key); setCommentReportError(null);
+    try {
+      await reportComment(emotion, noteId, commentId);
+      if (alive.current) setReportedComments(previous => new Set([...previous, key]));
+    } catch (e) {
+      if (alive.current) setCommentReportError({ id: key, message: errorCopy(e, zh) });
+    } finally { if (alive.current) setReportingComment(null); }
+  };
   return <section className="emotion-room" style={{ '--space-color': space.color } as React.CSSProperties}>
-    <button className="space-back" onClick={onBack} disabled={sending || replySending}><ArrowLeft size={16} />{zh ? '换一个空间' : 'Other spaces'}</button>
+    <button className="space-back" onClick={onBack} disabled={sending || replySending || commentSending}><ArrowLeft size={16} />{zh ? '换一个空间' : 'Other spaces'}</button>
     <header className="space-heading"><span className="space-swatch" /><h2>{space.label[language]}</h2><p>{space.hint[language]}</p></header>
     <div className="space-choices" role="group" aria-label={zh ? '此刻想做什么' : 'What feels right now'}>
-      <button aria-pressed={mode === 'read'} disabled={sending || replySending} onClick={() => { setMode('read'); setSent(false); }}><BookOpen size={20} /><span>{zh ? '看看别人留下的话' : 'Read others’ words'}</span></button>
-      <button aria-pressed={mode === 'write'} disabled={sending || replySending} onClick={() => { setMode('write'); setSent(false); }}><PenLine size={20} /><span>{zh ? '留下一句话' : 'Leave a few words'}</span></button>
+      <button aria-pressed={mode === 'read'} disabled={sending || replySending || commentSending} onClick={() => { setMode('read'); setSent(false); }}><BookOpen size={20} /><span>{zh ? '看看别人留下的话' : 'Read others’ words'}</span></button>
+      <button aria-pressed={mode === 'write'} disabled={sending || replySending || commentSending} onClick={() => { setMode('write'); setSent(false); }}><PenLine size={20} /><span>{zh ? '留下一句话' : 'Leave a few words'}</span></button>
     </div>
     {mode === null && <p className="space-quiet">{zh ? '只是看看，也很好。' : 'Just being here is enough.'}</p>}
     {mode === 'write' && (sent ? <div className="space-confirmation" role="status"><Check size={28} /><h3>{zh ? '你的这句话，留在这里了。' : 'Your words have a place here.'}</h3><p>{zh ? '另一个有相似感受的人，也许会在这里遇见它。' : 'Someone feeling something similar may find them here.'}</p><button className="space-primary" onClick={() => { setSent(false); setMode('read'); }}><BookOpen size={16} />{zh ? '看看其他人的话' : 'Read other notes'}</button></div> : <form className="space-compose" onSubmit={submit}>
@@ -106,15 +156,29 @@ const Room: React.FC<{ emotion: EmotionId; language: Language; onBack: () => voi
       <button className="space-primary" type="submit" disabled={sending || !text.trim()}>{sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}{sending ? (zh ? '正在审核…' : 'Reviewing…') : (zh ? '匿名留下' : 'Leave anonymously')}</button>
     </form>)}
     {mode === 'read' && <div className="space-feed">
-      <div className="space-feed-heading"><h3>{zh ? '此刻，有人也这样感觉' : 'Someone has felt this too'}</h3><button className="space-icon" aria-label={zh ? '刷新留言' : 'Refresh notes'} title={zh ? '刷新留言' : 'Refresh notes'} disabled={loading || replySending} onClick={() => void load()}><RefreshCw size={17} className={loading ? 'animate-spin' : ''} /></button></div>
+      <div className="space-feed-heading"><h3>{zh ? '此刻，有人也这样感觉' : 'Someone has felt this too'}</h3><button className="space-icon" aria-label={zh ? '刷新留言' : 'Refresh notes'} title={zh ? '刷新留言' : 'Refresh notes'} disabled={loading || replySending || commentSending} onClick={() => void load()}><RefreshCw size={17} className={loading ? 'animate-spin' : ''} /></button></div>
       {loadError && <p role="alert" className="space-error">{loadError}<button onClick={() => void load()}>{zh ? '重试' : 'Retry'}</button></p>}
       {loading && !notes.length && <p role="status" className="space-quiet">{zh ? '正在读大家留下的话…' : 'Loading the words left here…'}</p>}
       {!loading && !loadError && !notes.length && <p className="space-quiet">{zh ? '这里还没有人留下话。你可以静静待一会儿，也可以写下第一句。' : 'No words have been left here yet. You can stay quietly, or leave the first note.'}</p>}
       {notes.map(note => <article className="space-note" key={note.id}>
         <p className="space-note-text">{note.text}</p>
-        <div className="space-note-meta"><time dateTime={new Date(note.timestamp).toISOString()}>{new Date(note.timestamp).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</time><span><button disabled={reported.has(note.id) || reporting === note.id} onClick={() => void report(note.id)}><Flag size={14} />{reported.has(note.id) ? (zh ? '已举报' : 'Reported') : reporting === note.id ? (zh ? '正在提交' : 'Reporting') : (zh ? '举报' : 'Report')}</button><button disabled={replied.has(note.id) || replySending} onClick={() => { setReplyNote(replyNote === note.id ? null : note.id); setReplyChoice(null); setReplyError(''); }}><Heart size={15} />{replied.has(note.id) ? (zh ? '心意已留下' : 'Kindness sent') : (zh ? '留一点鼓励' : 'Leave encouragement')}</button></span></div>
+        <div className="space-note-meta"><time dateTime={new Date(note.timestamp).toISOString()}>{new Date(note.timestamp).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</time><span><button disabled={reported.has(note.id) || reporting === note.id} onClick={() => void report(note.id)}><Flag size={14} />{reported.has(note.id) ? (zh ? '已举报' : 'Reported') : reporting === note.id ? (zh ? '正在提交' : 'Reporting') : (zh ? '举报' : 'Report')}</button><button disabled={commentSending} aria-expanded={commentNote === note.id} onClick={() => void openComments(note.id)}><MessageCircle size={15} />{commentNote === note.id ? (zh ? '收起回应' : 'Hide replies') : (zh ? '写回应' : 'Write a reply')}</button><button disabled={replied.has(note.id) || replySending} onClick={() => { setReplyNote(replyNote === note.id ? null : note.id); setReplyChoice(null); setReplyError(''); }}><Heart size={15} />{replied.has(note.id) ? (zh ? '心意已留下' : 'Kindness sent') : (zh ? '送一句鼓励' : 'Send encouragement')}</button></span></div>
         {reportError?.id === note.id && <p role="alert" className="space-error">{reportError.message}</p>}
         {space.encouragements.map((message, i) => note.encouragements[`c${i}`] > 0 && <p className="space-encouragement" key={i}><Heart size={13} /><span>{message[language]}</span><span>{note.encouragements[`c${i}`]}</span></p>)}
+        {commentNote === note.id && <section className="space-comments" aria-label={zh ? '这条留言的匿名回应' : 'Anonymous replies to this note'}>
+          <h4>{zh ? '匿名回应' : 'Anonymous replies'}</h4>
+          {commentLoading && !comments[note.id] && <p role="status" className="space-quiet">{zh ? '正在读取回应…' : 'Loading replies…'}</p>}
+          {!commentLoading && comments[note.id]?.length === 0 && <p className="space-quiet">{zh ? '还没有回应。你可以留下一句温柔、相关的话。' : 'No replies yet. You can leave something kind and relevant.'}</p>}
+          {(comments[note.id] || []).map(comment => { const reportKey = `${note.id}:${comment.id}`; return <div className="space-comment" key={comment.id}><p>{comment.text}</p><div><time dateTime={new Date(comment.timestamp).toISOString()}>{new Date(comment.timestamp).toLocaleDateString(zh ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}</time><button disabled={reportedComments.has(reportKey) || reportingComment === reportKey} onClick={() => void reportAComment(note.id, comment.id)}><Flag size={12} />{reportedComments.has(reportKey) ? (zh ? '已举报' : 'Reported') : reportingComment === reportKey ? (zh ? '提交中' : 'Reporting') : (zh ? '举报' : 'Report')}</button></div>{commentReportError?.id === reportKey && <p role="alert" className="space-error">{commentReportError.message}</p>}</div>; })}
+          <form className="space-comment-form" onSubmit={event => void submitComment(event, note.id)}>
+            <label htmlFor={`space-comment-${note.id}`}>{zh ? '写一句相关的回应' : 'Write a relevant reply'}</label>
+            <textarea id={`space-comment-${note.id}`} rows={3} maxLength={180} value={commentText} disabled={commentSending} onChange={event => { setCommentText(event.target.value); setCommentError(''); setCommentSupport(false); }} placeholder={zh ? '例如：我也有过这样的时刻，希望你今天能轻一点。' : 'For example: I have felt this too. I hope today gets a little lighter.'} aria-describedby={`space-comment-safety-${note.id}`} />
+            <div className="space-compose-meta"><p id={`space-comment-safety-${note.id}`}>{zh ? '公开匿名 · 回应会先审核。请勿攻击、造谣或填写个人信息。' : 'Public and anonymous. Replies are reviewed. No attacks, allegations, or personal details.'}</p><span>{commentText.length}/180</span></div>
+            {commentError && <p role="alert" className="space-error">{commentError}</p>}
+            {commentSupport && <button className="space-back" type="button" onClick={onNeedHelp}><Heart size={16} />{zh ? '找一个能马上帮忙的人' : 'Find someone who can help now'}</button>}
+            <button className="space-primary" type="submit" disabled={commentSending || !commentText.trim()}>{commentSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}{commentSending ? (zh ? '正在审核…' : 'Reviewing…') : (zh ? '匿名回应' : 'Reply anonymously')}</button>
+          </form>
+        </section>}
         {replyNote === note.id && <fieldset className="space-reply" disabled={replySending}><legend>{zh ? '选一句你想对 TA 说的话' : 'Choose what you would like to say'}</legend>{space.encouragements.map((message, i) => <label key={i}><input type="radio" name={`reply-${note.id}`} value={i} checked={replyChoice === i} onChange={() => setReplyChoice(i)} /><span>{message[language]}</span></label>)}{replyError && <p role="alert" className="space-error">{replyError}</p>}<button className="space-primary" disabled={replyChoice === null || replySending} onClick={() => void reply(note.id)}>{replySending ? <Loader2 size={16} className="animate-spin" /> : <Heart size={16} />}{zh ? '送出这句话' : 'Send these words'}</button></fieldset>}
       </article>)}
       {cursor && <button className="space-back" disabled={loading} onClick={() => void load(true)}>{loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}{zh ? '看看更早的话' : 'Earlier notes'}</button>}

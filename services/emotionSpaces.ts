@@ -2,6 +2,7 @@ import { EMOTION_SPACES } from '../integrations/shared/emotion-spaces.js';
 export { EMOTION_SPACES };
 export type EmotionId = keyof typeof EMOTION_SPACES;
 export interface EmotionNote { id: string; text: string; timestamp: number; encouragements: Record<string, number>; }
+export interface EmotionComment { id: string; text: string; timestamp: number; }
 export class SpaceError extends Error {
   constructor(public code: string, public needsSupport = false) { super(code); }
 }
@@ -28,9 +29,18 @@ export function readSpace(emotion: EmotionId, cursor: string | null, signal: Abo
 export function leaveNote(emotion: EmotionId, text: string, language: string): Promise<{ note: EmotionNote }> {
   return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'note', emotion, text, language }) });
 }
+export function readComments(emotion: EmotionId, id: string, signal?: AbortSignal): Promise<{ comments: EmotionComment[] }> {
+  return request(`/api/spaces?${new URLSearchParams({ emotion, id })}`, { signal });
+}
+export function leaveComment(emotion: EmotionId, id: string, text: string, language: string): Promise<{ comment: EmotionComment }> {
+  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'comment', emotion, id, text, language }) });
+}
 export function encourageNote(emotion: EmotionId, id: string, choice: number): Promise<{ choice: number; count: number }> {
   return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'encourage', emotion, id, choice }) });
 }
 export function reportNote(emotion: EmotionId, id: string): Promise<{ ok: boolean }> {
   return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id }) });
+}
+export function reportComment(emotion: EmotionId, id: string, commentId: string): Promise<{ ok: boolean }> {
+  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id, commentId }) });
 }

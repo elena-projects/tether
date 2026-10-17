@@ -10,7 +10,8 @@ async function run(req, fetcher) {
   globalThis.fetch = fetcher;
   const { default: handler } = await import(`../integrations/portfolio-api/spaces.js?test=${Math.random()}`);
   const res = { code: 200, data: null, headers: {}, status(code) { this.code = code; return this; }, json(data) { this.data = data; return this; }, setHeader(name, value) { this.headers[name] = value; } };
-  try { await handler({ headers: { 'x-tether-proxy': 'test-proxy' }, ...req }, res); return res; }
+  const headers = { 'x-tether-proxy': 'test-proxy', ...(req.method === 'POST' ? { 'content-type': 'application/json' } : {}), ...(req.headers || {}) };
+  try { await handler({ ...req, headers }, res); return res; }
   finally { globalThis.fetch = previousFetch; for (const [key, value] of Object.entries(previousEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } }
 }
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -18,8 +19,9 @@ const model = verdict => json({ candidates: [{ content: { parts: [{ text: JSON.s
 const noFetch = () => { throw new Error('Unexpected network access'); };
 
 test('requires the private proxy and rejects invalid room/action/encouragement', async () => {
-  assert.equal((await run({ method: 'GET', headers: {}, query: { emotion: 'sad' } }, noFetch)).code, 403);
-  for (const body of [{ emotion: '../users', action: 'note', text: 'hello' }, { emotion: 'sad', action: 'delete' }, { emotion: 'sad', action: 'note', text: 'x'.repeat(301) }, { emotion: 'sad', action: 'encourage', id: noteId, choice: 9 }, { emotion: 'sad', action: 'encourage', id: '../other', choice: 0 }]) {
+  assert.equal((await run({ method: 'GET', headers: { 'x-tether-proxy': '' }, query: { emotion: 'sad' } }, noFetch)).code, 403);
+  assert.equal((await run({ method: 'POST', headers: { 'content-type': 'text/plain' }, body: { emotion: 'sad', action: 'note', text: 'hello' } }, noFetch)).code, 415);
+  for (const body of [{ emotion: '../users', action: 'note', text: 'hello' }, { emotion: 'sad', action: 'delete' }, { emotion: 'sad', action: 'note', text: 'x'.repeat(301) }, { emotion: 'sad', action: 'comment', id: noteId, text: 'x'.repeat(181) }, { emotion: 'sad', action: 'comment', id: '../other', text: 'hello' }, { emotion: 'sad', action: 'encourage', id: noteId, choice: 9 }, { emotion: 'sad', action: 'encourage', id: '../other', choice: 0 }]) {
     assert.equal((await run({ method: 'POST', body }, noFetch)).code, 400);
   }
 });
@@ -93,7 +95,7 @@ test('encouragement retries conditional-write conflicts and never accepts custom
   let writes = 0;
   const result = await run({ method: 'POST', body: { emotion: 'tired', action: 'encourage', id: noteId, choice: 1, text: 'Ignored custom comment' } }, async (url, options) => {
     if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
-    if (url.includes('/timestamp.json')) return json(123);
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'A note', timestamp: 123 });
     assert.match(url, /encouragements\/c1.json/);
     if (options.method !== 'PUT') return json(writes ? 5 : 4, 200, { etag: `etag-${writes}` });
     assert.equal(options.headers['if-match'], `etag-${writes}`);
@@ -111,6 +113,76 @@ test('cannot encourage a deleted or non-existent note', async () => {
   assert.equal(result.code, 404);
 });
 
+test('comment hard blocks reject obvious abuse and contact details before network access', async () => {
+  for (const text of ['你这个废物滚开', 'add me on Discord', 'https://spam.example']) {
+    const result = await run({ method: 'POST', body: { emotion: 'sad', action: 'comment', id: noteId, text } }, noFetch);
+    assert.equal(result.code, 422);
+    assert.equal(result.data.error, 'blocked');
+  }
+});
+
+test('safe comments are reviewed in note context and stored without identity', async () => {
+  let stored;
+  const result = await run({ method: 'POST', body: { emotion: 'lonely', action: 'comment', id: noteId, text: 'I have felt this too. I hope today feels lighter.', language: 'en', uid: 'ignored' } }, async (url, options = {}) => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'I feel alone today.', timestamp: 1 });
+    if (url.includes('generativelanguage')) {
+      const prompt = JSON.parse(options.body).contents[0].parts[0].text;
+      assert.match(prompt, /BLOCK rumors, defamation/);
+      assert.match(prompt, /Parent note: "I feel alone today\."/);
+      assert.match(prompt, /Proposed reply:/);
+      return model({ isSafe: true, needsSupport: false, reason: '' });
+    }
+    if (url.includes(`/emotionSpaceComments/lonely/${noteId}.json`) && !options.method) return json({});
+    assert.match(url, new RegExp(`emotionSpaceComments/lonely/${noteId}\\.json`));
+    stored = JSON.parse(options.body);
+    return json({ name: '-Ocomment00000000000' });
+  });
+  assert.equal(result.code, 200);
+  assert.deepEqual(Object.keys(stored).sort(), ['text', 'timestamp']);
+  assert.equal(result.data.comment.text, 'I have felt this too. I hope today feels lighter.');
+});
+
+test('comment moderation fails closed', async () => {
+  const result = await run({ method: 'POST', body: { emotion: 'sad', action: 'comment', id: noteId, text: 'A reply' } }, async url => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'A note', timestamp: 1 });
+    if (url.includes(`/emotionSpaceComments/sad/${noteId}.json`)) return json({});
+    if (url.includes('generativelanguage')) return json({}, 503);
+    throw new Error('Unexpected write');
+  });
+  assert.equal(result.code, 503);
+  assert.equal(result.data.error, 'unverifiable');
+});
+
+test('a note cannot accumulate an unbounded number of replies', async () => {
+  const full = Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`-C${String(i).padStart(18, '0')}`, { text: 'Reply', timestamp: i }]));
+  const result = await run({ method: 'POST', body: { emotion: 'sad', action: 'comment', id: noteId, text: 'A kind reply' } }, async url => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'A note', timestamp: 1 });
+    if (url.includes(`/emotionSpaceComments/sad/${noteId}.json`)) return json(full);
+    throw new Error('Moderation must not run after the cap is reached');
+  });
+  assert.equal(result.code, 409);
+  assert.equal(result.data.error, 'full');
+});
+
+test('comment reads are parent-scoped, bounded, and strip private properties', async () => {
+  const entries = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`-C${String(i).padStart(18, '0')}`, { text: `Reply ${i}`, timestamp: i + 1, uid: 'must-not-return' }]));
+  const result = await run({ method: 'GET', query: { emotion: 'tired', id: noteId } }, async url => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}/timestamp.json`)) return json(1);
+    const parsed = new URL(url);
+    assert.match(parsed.pathname, new RegExp(`emotionSpaceComments/tired/${noteId}\\.json`));
+    assert.equal(parsed.searchParams.get('limitToLast'), '12');
+    return json(entries);
+  });
+  assert.equal(result.code, 200);
+  assert.equal(result.data.comments.length, 12);
+  assert.equal(result.data.comments[0].text, 'Reply 3');
+  assert.ok(result.data.comments.every(comment => !('uid' in comment)));
+});
+
 test('reports an existing note to the private inbox without accepting report text', async () => {
   let report;
   const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, text: 'attacker supplied report text' } }, async (url, options = {}) => {
@@ -123,4 +195,20 @@ test('reports an existing note to the private inbox without accepting report tex
   assert.equal(result.code, 200);
   assert.match(report.text, /The stored note/);
   assert.doesNotMatch(report.text, /attacker supplied/);
+});
+
+test('reports a stored comment without accepting caller-supplied report text', async () => {
+  const commentId = '-C' + 'b'.repeat(18);
+  let report;
+  const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, commentId, text: 'forged report' } }, async (url, options = {}) => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'Parent note', timestamp: 1 });
+    if (url.includes(`/emotionSpaceComments/anxious/${noteId}/${commentId}.json`)) return json({ text: 'Stored comment', timestamp: 2 });
+    assert.match(url, /feedback\/test-inbox\.json/);
+    report = JSON.parse(options.body);
+    return json({ name: '-Oreport000000000000' });
+  });
+  assert.equal(result.code, 200);
+  assert.match(report.text, /Stored comment/);
+  assert.doesNotMatch(report.text, /forged report/);
 });

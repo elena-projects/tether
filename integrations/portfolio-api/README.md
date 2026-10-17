@@ -20,7 +20,8 @@ The deployed Portfolio project must place `wall.js` at `api/wall.js` and configu
 
 Firebase Realtime Database rules must restrict shared-data reads and writes to the
 dedicated writer's UID. Do not use a Firebase Admin key or legacy database secret
-here. The state endpoint stores only anonymous mood coordinates and
+here. Emotion notes and replies are separately scoped, server-moderated, bounded, and
+contain no author identity. The state endpoint stores only anonymous mood coordinates and
 activity time. It also performs server-side matching and returns no more than one
 anonymous candidate, so clients never download the users collection. Display names and
 journal history remain local to the browser.

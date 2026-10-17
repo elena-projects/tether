@@ -13,6 +13,16 @@ also remain anonymous when a visitor uses an optional local nickname.
 - `GET /api/spaces?emotion=...&cursor=...` returns at most 20 notes, newest first.
 - `POST /api/spaces` with `action: note` reviews first-person expression and stores
   only text and timestamp under `emotionSpaces/<emotion>/notes/<push-id>`.
+- `GET /api/spaces?emotion=...&id=...` returns at most the 12 newest anonymous
+  replies for one existing note. `action: comment` accepts up to 180 characters and
+  stores only text and timestamp under `emotionSpaceComments/<emotion>/<note-id>`.
+- Free-form replies are reviewed in the context of their parent note. Obvious abuse
+  and contact details are rejected locally before any model call; moderation also
+  blocks harassment, sexual content, dangerous instructions, personal information,
+  defamation, rumors, and unverifiable allegations about identifiable people.
+- Moderation fails closed. A note can hold at most 60 replies, reads remain bounded,
+  and `/api/spaces` has a separate nginx rate-limit zone. POST requests must use
+  `application/json`, preventing ordinary cross-site HTML forms from submitting.
 - Sadness, anxiety, loneliness, and exhaustion are allowed. The separate legacy wall
   remains a kindness-only surface. Existing wall posts are not assigned fabricated
   emotions or mixed into a room.
@@ -29,10 +39,12 @@ also remain anonymous when a visitor uses an optional local nickname.
   of network-level anonymity.
 - Direct client reads/writes of the new database node are denied. Only the dedicated
   backend Firebase user can access it, through the bounded API.
-- Readers can report a note without supplying free-form report text. The backend
-  retrieves the stored note and sends a fixed-format report to the private inbox.
-- Notes expire after 90 days. Each room read performs a bounded cleanup of up to 50
-  expired notes, so retention does not require a permanently running worker.
+- Readers can report a note or reply without supplying free-form report text. The
+  backend retrieves the stored content and sends a fixed-format report to the private
+  inbox, so a caller cannot forge the text shown to the reviewer.
+- Notes and their replies expire together after 90 days. Each room read performs a
+  bounded cleanup of up to 50 expired notes, so retention does not require a
+  permanently running worker.
 
 ## Deployment
 
@@ -42,7 +54,7 @@ also remain anonymous when a visitor uses an optional local nickname.
 3. Deploy Portfolio with its existing `WALL_PROXY_SECRET`, Firebase service-user
    credentials, and `GEMINI_API_KEY`. No new client secrets are required.
 4. Deploy Tether with `./deploy.sh`; nginx routes `/api/spaces` with the existing
-   private proxy header and wall rate-limit zone.
+   private proxy header and its dedicated rate-limit zone.
 
 The feature is additive in the database and backend. Do not deploy a frontend that
 depends on this endpoint until the database rules and backend are verified.
@@ -50,10 +62,11 @@ depends on this endpoint until the database rules and backend are verified.
 ## Verification
 
 Run `node --test tests/emotion-spaces.test.mjs`, `npx tsc --noEmit`, and `npm run build`.
-Handler tests cover proxy enforcement, invalid inputs, anonymous storage, moderation
-failures, support routing, bounded pagination, response field filtering, concurrent
-encouragements, and missing-note handling. Mocked moderation tests do not establish
-the real model's classification accuracy.
+Handler tests cover proxy enforcement, JSON-only writes, invalid inputs, anonymous
+storage, moderation failures, support routing, bounded pagination, comment caps,
+response field filtering, reports, concurrent encouragements, and missing-note
+handling. Mocked moderation tests do not establish the real model's classification
+accuracy.
 
 UI checks use disposable in-memory fixtures, never fake public users: enter with no
 nickname, choose a room, read, encourage, write, preserve text after a failed review,

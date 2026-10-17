@@ -21,6 +21,21 @@
         }
       }
     },
+    "emotionSpaceComments": {
+      "$emotion": {
+        "$noteId": {
+          ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
+          ".indexOn": ["timestamp"],
+          "$commentId": {
+            ".write": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2' && ($emotion == 'anxious' || $emotion == 'sad' || $emotion == 'lonely' || $emotion == 'tired' || $emotion == 'numb' || $emotion == 'calm') && $noteId.matches(/^[-_a-zA-Z0-9]{20}$/)",
+            ".validate": "newData.hasChildren(['text','timestamp'])",
+            "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 180" },
+            "timestamp": { ".validate": "newData.isNumber() && newData.val() <= now + 10000" },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    },
     "users": {
       "$box": {
         ".read": "auth != null && auth.uid == 'OfC2v8DUfocJ6DYkJXv0JdzCKIy2'",
