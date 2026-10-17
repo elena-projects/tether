@@ -34,7 +34,7 @@ const MOOD_CORNERS = {
   // Warm-neutral corners that sit gently around each theme's base so the "weather" tints
   // the room without ever clashing with the calm ground. Quadrants: tl storm, tr sun,
   // bl rain, br clear.
-  day:   { tl: [206, 190, 182], tr: [222, 206, 186], bl: [198, 192, 184], br: [220, 206, 190] },
+  day:   { tl: [231, 222, 218], tr: [238, 226, 209], bl: [226, 224, 218], br: [236, 228, 214] },
   night: { tl: [76, 62, 54],    tr: [92, 74, 56],    bl: [64, 60, 56],    br: [96, 82, 62] },
 };
 
@@ -544,7 +544,7 @@ export default function App() {
         style={{ backgroundColor: bgColor }}
       >
         {/* Film Grain */}
-        <div className="fixed inset-0 pointer-events-none opacity-[0.15] z-0 mix-blend-overlay"
+        <div className="film-grain fixed inset-0 pointer-events-none opacity-[0.15] z-0 mix-blend-overlay"
              style={{ 
                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
              }}
@@ -693,7 +693,7 @@ export default function App() {
           )}
 
           {/* always-reachable crisis support */}
-          <button onClick={() => setShowSafety(true)} className="mt-8 text-[11px] tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center gap-2 rounded-full border border-white/20 px-4 py-2">
+          <button onClick={() => setShowSafety(true)} className="safety-link mt-8 text-[11px] tracking-widest opacity-80 hover:opacity-100 transition-all flex items-center gap-2 rounded-full border border-white/20 px-4 py-2">
             <Heart size={11} /> {zh ? '需要真人帮助' : 'Talk to a real person'}
           </button>
         </main>

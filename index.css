@@ -11,13 +11,13 @@
    brown) and night (warm cream). --rose is Tether's identity accent — a terracotta/clay
    "warm light" used only on the logo, orb and buttons. --line is a warm taupe divider. */
 :root, html[data-theme="day"] {
-  --tint: 70 61 53;      /* 暖棕 ink #463D35 */
-  --rose: #c06a45;       /* 陶土 terracotta accent */
+  --tint: 52 47 42;      /* Deep warm charcoal #342F2A */
+  --rose: #b65338;       /* Deeper terracotta accent */
   --rose-soft: #e0c2b2;
-  --line: 203 189 174;   /* 暖褐灰 divider #CBBDAE */
-  --bg-base: #e9e1d5;    /* 暖砂 page ground */
-  --card: #f3ece2;       /* 暖米卡片 */
-  --muted: 133 120 104;  /* #857868 */
+  --line: 175 163 152;   /* Warm taupe divider #AFA398 */
+  --bg-base: #e9e1d5;    /* Preserve the original warm-sand ground */
+  --card: #f3ece2;
+  --muted: 108 98 89;    /* Warm secondary ink #6C6259 */
 }
 html[data-theme="night"] {
   --tint: 237 228 218;   /* 暖米色 ink #EDE4DA */
@@ -35,6 +35,37 @@ body {
   color: rgb(var(--tint));
   overflow-x: hidden;
   transition: background-color 1s ease, color 1s ease;
+}
+
+/* Day mode keeps the original ground while using a clearer humanist UI face. */
+html[data-theme="day"] .app-shell,
+html[data-theme="day"] .modal-panel,
+html[data-theme="day"] .history-panel,
+html[data-theme="day"] .feedback-launcher,
+html[data-theme="day"] .app-shell button,
+html[data-theme="day"] .modal-panel button,
+html[data-theme="day"] .history-panel button,
+html[data-theme="day"] .app-shell input,
+html[data-theme="day"] .app-shell textarea,
+html[data-theme="day"] .app-shell select {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+
+html[data-theme="day"] .app-header {
+  opacity: 1;
+}
+
+html[data-theme="day"] .film-grain {
+  opacity: .08;
+}
+
+html[data-theme="day"] .app-header button {
+  opacity: .86;
+}
+
+html[data-theme="day"] .app-header button:hover,
+html[data-theme="day"] .app-header button:focus-visible {
+  opacity: 1;
 }
 
 * {
@@ -155,6 +186,96 @@ body {
 .space-error button { margin-left: .75rem; text-decoration: underline; }
 .space-rest { display: flex; margin: 2rem auto 0; opacity: .75; }
 .emotion-spaces :focus-visible { outline: 2px solid var(--rose); outline-offset: 4px; }
+
+/* The light theme is intentionally quiet, but every action still needs crisp contrast. */
+html[data-theme="day"] .space-back,
+html[data-theme="day"] .space-rest,
+html[data-theme="day"] .space-note-meta,
+html[data-theme="day"] .space-compose-meta {
+  color: rgb(var(--muted));
+  opacity: 1;
+}
+
+html[data-theme="day"] .space-back,
+html[data-theme="day"] .space-rest {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+html[data-theme="day"] .space-heading p,
+html[data-theme="day"] .space-option span span {
+  color: rgb(var(--muted));
+  opacity: 1;
+  font-size: 1rem;
+}
+
+html[data-theme="day"] .space-option {
+  border-color: rgb(var(--line) / .95);
+  background: rgb(var(--tint) / .018);
+}
+
+html[data-theme="day"] .space-option:hover,
+html[data-theme="day"] .space-option:focus-visible {
+  background: rgb(var(--tint) / .045);
+  border-color: var(--space-color);
+}
+
+html[data-theme="day"] .space-option strong,
+html[data-theme="day"] .space-choices button,
+html[data-theme="day"] .space-primary {
+  font-weight: 600;
+}
+
+html[data-theme="day"] .space-choices {
+  border-color: rgb(var(--line) / .95);
+}
+
+html[data-theme="day"] .space-choices button,
+html[data-theme="day"] .space-primary {
+  font-size: 1rem;
+}
+
+html[data-theme="day"] .space-primary {
+  color: #fffaf5;
+}
+
+html[data-theme="day"] .space-note,
+html[data-theme="day"] .space-reply,
+html[data-theme="day"] .space-comments,
+html[data-theme="day"] .space-comment {
+  border-color: rgb(var(--line) / .75);
+}
+
+html[data-theme="day"] .space-compose textarea,
+html[data-theme="day"] .space-comment-form textarea {
+  border-color: rgb(var(--line));
+  background: rgb(255 252 248 / .26);
+}
+
+html[data-theme="day"] .space-compose textarea::placeholder,
+html[data-theme="day"] .space-comment-form textarea::placeholder {
+  color: rgb(var(--muted) / .85);
+}
+
+html[data-theme="day"] .safety-link {
+  color: var(--rose);
+  border-color: rgb(182 83 56 / .48);
+  font-size: .9375rem;
+  font-weight: 600;
+  opacity: 1;
+}
+
+html[data-theme="day"] .safety-link:hover,
+html[data-theme="day"] .safety-link:focus-visible {
+  background: rgb(182 83 56 / .07);
+  border-color: var(--rose);
+}
+
+html[data-theme="day"] .feedback-launcher {
+  color: rgb(var(--tint));
+  border-color: rgb(var(--line));
+  opacity: .88;
+}
 @media (max-width: 599px) {
   .space-grid { grid-template-columns: 1fr; gap: .75rem; }
   .space-option { padding: 1rem; }
