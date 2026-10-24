@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { X, Heart, Sparkles, MessageCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Heart, Loader2, MessageCircle, MessagesSquare, Send } from 'lucide-react';
 import { Language, Message } from '../types';
 
 interface Props {
@@ -11,31 +11,60 @@ interface Props {
   onClose: () => void;
   myUid?: string;                          // so we never offer to write to ourselves
   onConfide?: (msg: Message) => void;      // reach the person whose words landed for you
+  onSend?: (text: string) => Promise<void>;
 }
 
 // The "wall" — always reachable from the header, so anyone can read the kind words
 // others have written (and add a heart), whatever mood they're in.
-const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, loading, language, onClose, myUid, onConfide }) => {
+const WallPanel: React.FC<Props> = ({ messages, votedIds, onVote, loading, language, onClose, myUid, onConfide, onSend }) => {
   const zh = language === 'zh';
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [sent, setSent] = useState(false);
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
 
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = draft.trim();
+    if (!onSend || !text || sending) return;
+    setSending(true); setSendError(''); setSent(false);
+    try {
+      await onSend(text);
+      setDraft(''); setSent(true);
+    } catch (error: any) {
+      setSendError(error?.code === 'blocked'
+        ? (zh ? '这句话没有通过温柔度审核，可以换一种更友善的说法。' : 'This did not pass the kindness review. Try a gentler version.')
+        : (zh ? '暂时没能送出，请稍后再试。' : 'This could not be sent. Please try again later.'));
+    } finally { setSending(false); }
+  };
+
   return (
     <div className="modal-overlay viewport-overlay fixed inset-0 z-[65] bg-black/45 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="wall-title" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-base)' }} className="modal-panel w-full max-w-lg max-h-[88vh] overflow-hidden rounded-3xl shadow-2xl text-white flex flex-col">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-white/10">
-          <Sparkles size={16} className="text-teal-300" />
+          <MessagesSquare size={18} style={{ color: 'var(--rose)' }} />
           <div>
-            <h2 id="wall-title" className="font-bold">{zh ? '大家的暖心话' : 'Wall of kind words'}</h2>
-            <p className="text-[11px] opacity-50">{zh ? '每个人写给彼此的一点光' : 'little lights people wrote for each other'}</p>
+            <h2 id="wall-title" className="font-bold">{zh ? '暖心留言墙' : 'Community wall'}</h2>
+            <p className="text-[11px] opacity-60">{zh ? '看看大家的话，也可以留一句给后来的人' : 'Read what others left, or add a few words for someone else'}</p>
           </div>
           <button onClick={onClose} aria-label={zh ? '关闭暖心墙' : 'Close kind words'} className="ml-auto p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"><X size={18} /></button>
         </div>
 
         <div className="overflow-y-auto no-scrollbar p-5 space-y-3">
+          {onSend && (
+            <form className="wall-compose" onSubmit={submit}>
+              <label htmlFor="wall-message">{zh ? '写给来到这里的人' : 'Write to someone who comes here'}</label>
+              <textarea id="wall-message" value={draft} onChange={event => { setDraft(event.target.value); setSendError(''); setSent(false); }} maxLength={300} rows={3} placeholder={zh ? '一句温柔、真诚、不要求对方回应的话…' : 'Something kind and sincere, with no expectation of a reply…'} disabled={sending} />
+              <div><span>{draft.length}/300</span><button type="submit" disabled={sending || !draft.trim()}>{sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}{sending ? (zh ? '正在审核' : 'Reviewing') : (zh ? '匿名留下' : 'Leave anonymously')}</button></div>
+              {sent && <p role="status">{zh ? '已经留在墙上了。' : 'Your words are now on the wall.'}</p>}
+              {sendError && <p role="alert">{sendError}</p>}
+            </form>
+          )}
           {loading ? (
             /* Placeholder words used to fill this gap, but they looked exactly like real ones —
                and carried no author and no way to reach anybody, so the wall seemed inert. */

@@ -3,6 +3,8 @@ export { EMOTION_SPACES };
 export type EmotionId = keyof typeof EMOTION_SPACES;
 export interface EmotionNote { id: string; text: string; timestamp: number; encouragements: Record<string, number>; }
 export interface EmotionComment { id: string; text: string; timestamp: number; }
+export type ReportReason = 'abuse' | 'privacy' | 'sexual' | 'dangerous' | 'spam' | 'other';
+export interface ReportResult { ok: true; forwarded: boolean; }
 export class SpaceError extends Error {
   constructor(public code: string, public needsSupport = false) { super(code); }
 }
@@ -38,9 +40,9 @@ export function leaveComment(emotion: EmotionId, id: string, text: string, langu
 export function encourageNote(emotion: EmotionId, id: string, choice: number): Promise<{ choice: number; count: number }> {
   return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'encourage', emotion, id, choice }) });
 }
-export function reportNote(emotion: EmotionId, id: string): Promise<{ ok: boolean }> {
-  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id }) });
+export function reportNote(emotion: EmotionId, id: string, reason: ReportReason): Promise<ReportResult> {
+  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id, reason }) });
 }
-export function reportComment(emotion: EmotionId, id: string, commentId: string): Promise<{ ok: boolean }> {
-  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id, commentId }) });
+export function reportComment(emotion: EmotionId, id: string, commentId: string, reason: ReportReason): Promise<ReportResult> {
+  return request('/api/spaces', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'report', emotion, id, commentId, reason }) });
 }

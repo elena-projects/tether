@@ -21,7 +21,7 @@ const noFetch = () => { throw new Error('Unexpected network access'); };
 test('requires the private proxy and rejects invalid room/action/encouragement', async () => {
   assert.equal((await run({ method: 'GET', headers: { 'x-tether-proxy': '' }, query: { emotion: 'sad' } }, noFetch)).code, 403);
   assert.equal((await run({ method: 'POST', headers: { 'content-type': 'text/plain' }, body: { emotion: 'sad', action: 'note', text: 'hello' } }, noFetch)).code, 415);
-  for (const body of [{ emotion: '../users', action: 'note', text: 'hello' }, { emotion: 'sad', action: 'delete' }, { emotion: 'sad', action: 'note', text: 'x'.repeat(301) }, { emotion: 'sad', action: 'comment', id: noteId, text: 'x'.repeat(181) }, { emotion: 'sad', action: 'comment', id: '../other', text: 'hello' }, { emotion: 'sad', action: 'encourage', id: noteId, choice: 9 }, { emotion: 'sad', action: 'encourage', id: '../other', choice: 0 }]) {
+  for (const body of [{ emotion: '../users', action: 'note', text: 'hello' }, { emotion: 'sad', action: 'delete' }, { emotion: 'sad', action: 'note', text: 'x'.repeat(301) }, { emotion: 'sad', action: 'comment', id: noteId, text: 'x'.repeat(181) }, { emotion: 'sad', action: 'comment', id: '../other', text: 'hello' }, { emotion: 'sad', action: 'encourage', id: noteId, choice: 9 }, { emotion: 'sad', action: 'encourage', id: '../other', choice: 0 }, { emotion: 'sad', action: 'report', id: noteId }, { emotion: 'sad', action: 'report', id: noteId, reason: 'dislike' }]) {
     assert.equal((await run({ method: 'POST', body }, noFetch)).code, 400);
   }
 });
@@ -183,27 +183,31 @@ test('comment reads are parent-scoped, bounded, and strip private properties', a
   assert.ok(result.data.comments.every(comment => !('uid' in comment)));
 });
 
-test('reports an existing note to the private inbox without accepting report text', async () => {
+test('actionable reports reach the private inbox with a fixed reason and stored text', async () => {
   let report;
-  const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, text: 'attacker supplied report text' } }, async (url, options = {}) => {
+  const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, reason: 'abuse', text: 'attacker supplied report text' } }, async (url, options = {}) => {
     if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
     if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'The stored note', timestamp: 1 });
+    if (url.includes('generativelanguage')) return model({ actionable: true, urgent: false, reason: 'Targeted abuse.' });
     assert.match(url, /feedback\/test-inbox\.json/);
     report = JSON.parse(options.body);
     return json({ name: '-Oreport000000000000' });
   });
   assert.equal(result.code, 200);
+  assert.equal(result.data.forwarded, true);
   assert.match(report.text, /The stored note/);
+  assert.match(report.text, /Reason: abuse/);
   assert.doesNotMatch(report.text, /attacker supplied/);
 });
 
 test('reports a stored comment without accepting caller-supplied report text', async () => {
   const commentId = '-C' + 'b'.repeat(18);
   let report;
-  const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, commentId, text: 'forged report' } }, async (url, options = {}) => {
+  const result = await run({ method: 'POST', body: { emotion: 'anxious', action: 'report', id: noteId, commentId, reason: 'privacy', text: 'forged report' } }, async (url, options = {}) => {
     if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
     if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'Parent note', timestamp: 1 });
     if (url.includes(`/emotionSpaceComments/anxious/${noteId}/${commentId}.json`)) return json({ text: 'Stored comment', timestamp: 2 });
+    if (url.includes('generativelanguage')) return model({ actionable: true, urgent: false, reason: 'Contact details.' });
     assert.match(url, /feedback\/test-inbox\.json/);
     report = JSON.parse(options.body);
     return json({ name: '-Oreport000000000000' });
@@ -211,4 +215,36 @@ test('reports a stored comment without accepting caller-supplied report text', a
   assert.equal(result.code, 200);
   assert.match(report.text, /Stored comment/);
   assert.doesNotMatch(report.text, /forged report/);
+});
+
+test('benign content reported by mistake does not enter the private inbox', async () => {
+  let inboxWrites = 0;
+  const result = await run({ method: 'POST', body: { emotion: 'sad', action: 'report', id: noteId, reason: 'dangerous' } }, async (url, options = {}) => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'Go outside, feel the sun, and remember this will pass.', timestamp: 1 });
+    if (url.includes('generativelanguage')) {
+      const prompt = JSON.parse(options.body).contents[0].parts[0].text;
+      assert.match(prompt, /disagreement, or content that simply does not match/);
+      return model({ actionable: false, urgent: false, reason: 'Benign encouragement.' });
+    }
+    if (url.includes('/feedback/')) inboxWrites++;
+    return json({ name: '-Ounexpected' });
+  });
+  assert.equal(result.code, 200);
+  assert.equal(result.data.forwarded, false);
+  assert.equal(inboxWrites, 0);
+});
+
+test('report review outages preserve the report for human review', async () => {
+  let report;
+  const result = await run({ method: 'POST', body: { emotion: 'sad', action: 'report', id: noteId, reason: 'other' } }, async (url, options = {}) => {
+    if (url.includes('identitytoolkit')) return json({ idToken: 'test' });
+    if (url.includes(`/notes/${noteId}.json`)) return json({ text: 'Ambiguous stored note', timestamp: 1 });
+    if (url.includes('generativelanguage')) return json({}, 503);
+    if (url.includes('/feedback/')) { report = JSON.parse(options.body); return json({ name: '-Ofallback' }); }
+    throw new Error('Unexpected request');
+  });
+  assert.equal(result.code, 200);
+  assert.equal(result.data.forwarded, true);
+  assert.match(report.text, /review was unavailable/i);
 });

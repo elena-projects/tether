@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, LifeBuoy, Heart } from 'lucide-react';
+import { MessageCircle, MessagesSquare, X, Send, LifeBuoy, Heart } from 'lucide-react';
 import { Language } from '../types';
 import { screenConfide } from '../services/geminiService';
 
@@ -206,7 +206,7 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
             ) : (
               <form onSubmit={submit}>
                 <p className="text-[10px] tracking-[0.3em] uppercase mb-3" style={{ color: 'var(--rose)' }}>
-                  {zh ? '说说你的想法' : 'Tell me what you think'}
+                  {zh ? '给 Elena 的产品反馈' : 'Product feedback for Elena'}
                 </p>
 
                 {/* the ask — why their words matter */}
@@ -215,6 +215,13 @@ const FeedbackWidget: React.FC<FeedbackWidgetProps> = ({ language, onNeedHelp, o
                     ? '这个小工具是我一个人做的，还在一直改。哪里不好用、哪里卡住了、想要什么功能——你的一句话我都会认真看，而且真的会照着改。'
                     : "I'm a student, and I built this on my own — it's still changing. If something felt confusing, broke, or you wish it did something else, tell me. I read every message, and I really do change things because of them."}
                 </p>
+
+                {onOpenWall && (
+                  <button type="button" onClick={() => { close(); onOpenWall(); }} className="feedback-wall-link mb-5 w-full flex items-center gap-3 border px-4 py-3 text-left transition-colors">
+                    <MessagesSquare size={18} />
+                    <span><strong className="block text-[12.5px]">{zh ? '想写给大家？去暖心留言墙' : 'Writing to everyone? Go to the community wall'}</strong><span className="block mt-1 text-[10.5px] opacity-65">{zh ? '那里是用户之间分享和回应的地方' : 'That is the shared space for community words and responses'}</span></span>
+                  </button>
+                )}
 
                 <textarea
                   ref={areaRef}

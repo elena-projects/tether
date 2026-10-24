@@ -18,7 +18,7 @@ import SafetyNet from './components/SafetyNet';
 import WallPanel from './components/WallPanel';
 import FeedbackWidget from './components/FeedbackWidget';
 import EmotionSpaces from './components/EmotionSpaces';
-import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, Sparkles, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
+import { Send, Heart, ShieldAlert, Loader2, BookOpen, Users, MessagesSquare, Volume2, VolumeX, Radio, Globe, ArrowLeft, ArrowRight, Sun, Moon, LogOut, LifeBuoy } from 'lucide-react';
 
 const INITIAL_STATE: TetherState = {
   valence: 50,
@@ -405,6 +405,37 @@ export default function App() {
     setIsProcessing(false);
   };
 
+  const handleWallSend = async (text: string) => {
+    const textToSend = text.trim();
+    if (!textToSend || !currentUser) throw new Error('not_ready');
+    const badLocal = /(去死|自杀|自残|杀了你|滚蛋|傻[逼比屄]|贱人|微信号|加我微信|我的电话|手机号|qq号|kill yourself|\bkys\b)/i;
+    if (badLocal.test(textToSend)) throw Object.assign(new Error('blocked'), { code: 'blocked' });
+
+    await sendTetherMessage(
+      { uid: currentUser.uid, name: currentUser.username },
+      'wall',
+      textToSend,
+      'human',
+      language === 'en' ? 'en' : 'zh',
+    );
+
+    const localMessage: Message = {
+      id: `local-${Date.now()}`,
+      text: textToSend,
+      senderName: currentUser.username,
+      senderId: currentUser.uid,
+      targetId: 'wall',
+      timestamp: Date.now(),
+      voteCount: 0,
+      type: 'human',
+    };
+    setWallMessages(previous => [localMessage, ...previous]);
+    setWallLoaded(true);
+    appendSent({ id: Date.now(), timestamp: Date.now(), text: textToSend, target: 'wall' });
+    try { localStorage.setItem('tether_last_action', 'helped'); } catch {}
+    try { (window as any).gtag?.('event', 'tether_wall_message_sent'); } catch {}
+  };
+
   const handleResetAnchor = () => {
     setSentSuccess(false);
     setTargetDescriptor(TARGET_DESCRIPTORS[Math.floor(Math.random() * TARGET_DESCRIPTORS.length)]);
@@ -519,6 +550,7 @@ export default function App() {
           language={language}
           onClose={() => setShowWall(false)}
           myUid={currentUser?.uid}
+          onSend={handleWallSend}
         />
       )}
 
@@ -568,8 +600,10 @@ export default function App() {
                     <LifeBuoy size={15} /> <span className="hidden sm:inline">{zh ? '稳一稳' : 'Reset'}</span>
                  </button>
 
-                 <button onClick={() => setShowWall(true)} className="opacity-70 hover:opacity-100 transition-opacity" title={zh ? '大家的暖心话' : 'Wall of kind words'} aria-label={zh ? '大家的暖心话' : 'Wall of kind words'}>
-                    <Sparkles size={18} />
+                 <button onClick={() => setShowWall(true)} className="wall-entry flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors" title={zh ? '打开暖心留言墙' : 'Open the community wall'} aria-label={zh ? '打开暖心留言墙' : 'Open the community wall'}>
+                    <MessagesSquare size={18} />
+                    <span className="wall-mobile-label sm:hidden text-[11px] font-semibold tracking-widest">{zh ? '留言' : 'Wall'}</span>
+                    <span className="wall-desktop-label hidden sm:inline text-[11px] font-semibold tracking-widest">{zh ? '留言墙' : 'Community'}</span>
                  </button>
 
                  <button onClick={toggleSound} className={`transition-opacity ${soundOn ? 'opacity-80 hover:opacity-100' : 'opacity-60 hover:opacity-90'}`} title={soundOn ? (zh ? '关闭疗愈音' : 'Sound on') : (zh ? '开启疗愈音' : 'Sound off')} aria-label={soundOn ? (zh ? '关闭疗愈音' : 'Turn sound off') : (zh ? '开启疗愈音' : 'Turn sound on')} aria-pressed={soundOn}>
